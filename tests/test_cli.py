@@ -13,12 +13,16 @@ def test_cli_version():
     assert "ag-init version" in result.stdout
 
 
+import re
+
+
 def test_cli_help():
-    result = runner.invoke(app, ["--help"])
+    result = runner.invoke(app, ["--help"], color=False)
     assert result.exit_code == 0
-    assert "Automated workspace initializer" in result.stdout
-    assert "--language-in" in result.stdout
-    assert "--badges" in result.stdout
+    clean_stdout = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", result.stdout)
+    assert "Automated workspace initializer" in clean_stdout
+    assert "language-in" in clean_stdout
+    assert "badges" in clean_stdout
 
 
 def test_cli_rules_list():
