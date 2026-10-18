@@ -407,6 +407,12 @@ def install_cmd(
         file_okay=False,
         dir_okay=True,
     ),
+    git: Optional[str] = typer.Option(
+        None,
+        "--git",
+        "-g",
+        help="Git repository URL to install from (e.g. https://github.com/org/ag-init.git)",
+    ),
     backend: Optional[str] = typer.Option(
         None,
         "--backend",
@@ -444,6 +450,7 @@ def install_cmd(
         with console.status("[bold green]Installing ag-init globally...[/bold green]"):
             result = install_ag_init(
                 source_path=path,
+                git_url=git,
                 backend=backend,
                 editable=editable,
                 upgrade=upgrade,
@@ -452,6 +459,7 @@ def install_cmd(
     else:
         result = install_ag_init(
             source_path=path,
+            git_url=git,
             backend=backend,
             editable=editable,
             upgrade=upgrade,

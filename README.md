@@ -18,6 +18,12 @@ Run instantly without installing via `uvx` or `pipx`:
 uvx ag-init
 ```
 
+Or run directly from a Git repository:
+
+```bash
+uvx --from git+https://github.com/<org>/ag-init.git ag-init
+```
+
 Or target a specific directory:
 
 ```bash
@@ -29,14 +35,17 @@ uvx ag-init --path ./my-new-project
 Install `ag-init` permanently as a global CLI tool:
 
 ```bash
-# Automatically installs via uv tool (or pipx/pip)
+# 1. Directly from a Git repository:
+uv tool install git+https://github.com/<org>/ag-init.git
+# or with pipx:
+pipx install git+https://github.com/<org>/ag-init.git
+
+# 2. Or using the built-in installer:
 ag-init install
+ag-init install --git https://github.com/<org>/ag-init.git
 
 # Install in editable mode from local checkout
 ag-init install --editable
-
-# Specify a preferred backend
-ag-init install --backend pipx
 
 # Uninstall
 ag-init uninstall

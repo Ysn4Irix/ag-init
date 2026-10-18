@@ -33,9 +33,25 @@ def detect_available_backends() -> List[str]:
     return backends
 
 
-def resolve_install_source(target_path: Optional[Path] = None) -> Tuple[str, bool]:
-    """Determine whether to install from a local checkout or remote package."""
-    check_dir = (target_path or Path.cwd()).resolve()
+def resolve_install_source(
+    target_path: Optional[Path | str] = None,
+    git_url: Optional[str] = None,
+) -> Tuple[str, bool]:
+    """Determine whether to install from a local checkout, git repo, or remote package."""
+    if git_url:
+        normalized = git_url if git_url.startswith("git+") else f"git+{git_url}"
+        return normalized, False
+
+    if isinstance(target_path, str) and (
+        target_path.startswith("http://")
+        or target_path.startswith("https://")
+        or target_path.startswith("git+")
+        or target_path.startswith("git@")
+    ):
+        normalized = target_path if target_path.startswith("git+") else f"git+{target_path}"
+        return normalized, False
+
+    check_dir = (Path(target_path) if target_path else Path.cwd()).resolve()
     pyproject = check_dir / "pyproject.toml"
 
     if pyproject.exists():
@@ -129,7 +145,8 @@ def verify_cli_path() -> Tuple[bool, Optional[str]]:
 
 
 def install_ag_init(
-    source_path: Optional[Path] = None,
+    source_path: Optional[Path | str] = None,
+    git_url: Optional[str] = None,
     backend: Optional[str] = None,
     editable: bool = False,
     upgrade: bool = True,
@@ -156,8 +173,8 @@ def install_ag_init(
             is_on_path=False,
         )
 
-    source, is_local = resolve_install_source(source_path)
-    # If installing a remote package, editable makes no sense
+    source, is_local = resolve_install_source(source_path, git_url=git_url)
+    # If installing a remote package or git repo, editable makes no sense
     use_editable = editable and is_local
 
     cmd = build_install_command(

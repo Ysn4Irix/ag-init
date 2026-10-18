@@ -104,6 +104,22 @@ def test_cli_install_command_dry_run():
     assert "Command:" in result.stdout
 
 
+def test_resolve_install_source_git():
+    src1, is_local1 = resolve_install_source(git_url="https://github.com/my-org/ag-init.git")
+    assert is_local1 is False
+    assert src1 == "git+https://github.com/my-org/ag-init.git"
+
+    src2, is_local2 = resolve_install_source(target_path="git+ssh://git@github.com/my-org/ag-init.git")
+    assert is_local2 is False
+    assert src2 == "git+ssh://git@github.com/my-org/ag-init.git"
+
+
+def test_cli_install_command_git_dry_run():
+    result = runner.invoke(app, ["install", "--git", "https://github.com/org/repo.git", "--dry-run"])
+    assert result.exit_code == 0
+    assert "git+https://github.com/org/repo.git" in result.stdout
+
+
 def test_cli_uninstall_command_dry_run():
     result = runner.invoke(app, ["uninstall", "--dry-run"])
     assert result.exit_code == 0
