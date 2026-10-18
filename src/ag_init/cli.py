@@ -28,6 +28,10 @@ from ag_init.runner import (
     run_ag_kit,
     run_antislop,
 )
+from ag_init.installer import (
+    install_ag_init,
+    uninstall_ag_init,
+)
 
 if sys.platform == "win32":
     try:
@@ -390,3 +394,112 @@ def sync_rules(
     console.print(f"[green][+] Synced {len(res.rules_updated)} rule(s) in {agents_md}[/green]")
     if missing_ids:
         console.print(f"[yellow][!] Could not find template for installed rules: {', '.join(missing_ids)}[/yellow]")
+
+
+@app.command("install")
+def install_cmd(
+    path: Optional[Path] = typer.Option(
+        None,
+        "--path",
+        "-p",
+        help="Source checkout directory (auto-detects local ag-init source if omitted)",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+    ),
+    backend: Optional[str] = typer.Option(
+        None,
+        "--backend",
+        "-b",
+        help="Tool installer backend to use: 'uv', 'pipx', or 'pip' (auto-detects highest priority)",
+    ),
+    editable: bool = typer.Option(
+        False,
+        "--editable",
+        "-e",
+        help="Install in editable mode (only applies when installing from local source)",
+    ),
+    upgrade: bool = typer.Option(
+        True,
+        "--upgrade/--no-upgrade",
+        "-U",
+        help="Force overwrite or upgrade existing installation",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview command without executing",
+    ),
+):
+    """Install ag-init globally on your system using uv tool, pipx, or pip."""
+    console.print(
+        Panel(
+            f"[bold cyan]ag-init Package Installer[/bold cyan] [dim]v{__version__}[/dim]\n"
+            + (" [bold red](DRY RUN)[/bold red]" if dry_run else ""),
+            border_style="cyan",
+        )
+    )
+
+    if not dry_run:
+        with console.status("[bold green]Installing ag-init globally...[/bold green]"):
+            result = install_ag_init(
+                source_path=path,
+                backend=backend,
+                editable=editable,
+                upgrade=upgrade,
+                dry_run=dry_run,
+            )
+    else:
+        result = install_ag_init(
+            source_path=path,
+            backend=backend,
+            editable=editable,
+            upgrade=upgrade,
+            dry_run=dry_run,
+        )
+
+    if not result.success:
+        console.print(f"[bold red]Installation failed:[/bold red] {result.output}")
+        raise typer.Exit(code=1)
+
+    console.print(f"  [green][+][/green] Backend: [bold cyan]{result.backend_used}[/bold cyan]")
+    console.print(f"  [green][+][/green] Command: [dim]{' '.join(result.command_executed)}[/dim]")
+
+    if result.output and not dry_run:
+        console.print(Panel(result.output, title="Output", border_style="dim"))
+
+    if result.is_on_path:
+        console.print("\n[bold green][+] ag-init is installed and ready on your PATH![/bold green]")
+        console.print("You can now run [cyan]ag-init[/cyan] anywhere in your terminal.\n")
+    else:
+        console.print("\n[bold yellow][!] PATH Notice:[/bold yellow]")
+        if result.path_guidance:
+            console.print(f"[yellow]{result.path_guidance}[/yellow]\n")
+
+
+@app.command("uninstall")
+def uninstall_cmd(
+    backend: Optional[str] = typer.Option(
+        None,
+        "--backend",
+        "-b",
+        help="Tool installer backend to uninstall from: 'uv', 'pipx', or 'pip'",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview command without executing",
+    ),
+):
+    """Uninstall ag-init from your system."""
+    console.print(f"[bold cyan]Uninstalling ag-init...[/bold cyan]")
+    success, output, cmd = uninstall_ag_init(backend=backend, dry_run=dry_run)
+
+    if not success:
+        console.print(f"[bold red]Uninstallation failed:[/bold red] {output}")
+        raise typer.Exit(code=1)
+
+    console.print(f"  [green][+][/green] Command: [dim]{' '.join(cmd)}[/dim]")
+    if output and not dry_run:
+        console.print(output)
+    console.print("[bold green][+] ag-init uninstalled successfully.[/bold green]")

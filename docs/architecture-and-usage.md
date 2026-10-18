@@ -38,6 +38,32 @@ uvx ag-init --dry-run
 
 ---
 
+## Global Package Installation
+
+`ag-init` can install itself permanently as a global CLI tool across your system:
+
+```bash
+# Auto-detects uv tool (or pipx/pip) and installs globally
+ag-init install
+
+# Install local development checkout in editable mode
+ag-init install --editable
+
+# Force a specific installer backend
+ag-init install --backend pipx
+
+# Dry run preview of installation commands
+ag-init install --dry-run
+
+# Uninstall
+ag-init uninstall
+```
+
+### PATH Verification & Shell Guidance
+When running `ag-init install`, the engine automatically verifies whether the binary directory is present on your active `PATH`. If missing, it provides clear setup instructions (e.g. `uv tool update-shell` or adding the user local bin directory to environment variables).
+
+---
+
 ## Managing Future & Custom Rules
 
 `ag-init` includes a sub-command group `rules`:

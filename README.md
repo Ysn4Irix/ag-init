@@ -24,6 +24,24 @@ Or target a specific directory:
 uvx ag-init --path ./my-new-project
 ```
 
+## Global Installation
+
+Install `ag-init` permanently as a global CLI tool:
+
+```bash
+# Automatically installs via uv tool (or pipx/pip)
+ag-init install
+
+# Install in editable mode from local checkout
+ag-init install --editable
+
+# Specify a preferred backend
+ag-init install --backend pipx
+
+# Uninstall
+ag-init uninstall
+```
+
 ## Options
 
 ```bash
