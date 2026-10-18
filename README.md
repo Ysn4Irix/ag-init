@@ -30,7 +30,23 @@ Or target a specific directory:
 uvx ag-init --path ./my-new-project
 ```
 
-## Global Installation
+## Zero-Dependency One-Line Install (Fresh Machine)
+
+If **Python, uv, and pipx are NOT installed** on the system, run this single command to bootstrap everything automatically (no admin/root privileges required):
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/<org>/ag-init/main/install.ps1 | iex"
+```
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/<org>/ag-init/main/install.sh | sh
+```
+
+*(This automatically installs standalone `uv`, which pulls an isolated, sandboxed Python environment on demand without touching system packages).*
+
+## Global Installation (When uv, pipx, or Python is Available)
 
 Install `ag-init` permanently as a global CLI tool:
 

@@ -38,7 +38,29 @@ uvx ag-init --dry-run
 
 ---
 
-## Global Package Installation
+## Zero-Dependency Bootstrap (Clean / Fresh Machines)
+
+If the target machine does **not have Python, uv, or pipx installed**, you can bootstrap everything with a single command without requiring admin privileges:
+
+### Windows (PowerShell)
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/<org>/ag-init/main/install.ps1 | iex"
+```
+
+### macOS / Linux (Bash)
+```bash
+curl -fsSL https://raw.githubusercontent.com/<org>/ag-init/main/install.sh | sh
+```
+
+**How it works:**
+1. Downloads Astral's official standalone `uv` binary (which requires zero Python or compiler dependencies).
+2. `uv` downloads and manages an isolated, self-contained Python runtime in user space (`~/.local/share/uv/python`).
+3. Runs `uv tool install ag-init` from the git repository.
+4. Validates that `ag-init` is available on the shell `PATH`.
+
+---
+
+## Global Package Installation (Existing Python / uv / pipx)
 
 `ag-init` can install itself permanently as a global CLI tool across your system:
 
