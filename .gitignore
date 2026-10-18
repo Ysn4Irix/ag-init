@@ -1,0 +1,12 @@
+# Antigravity Kit & Backups
+.agents/
+.ag-kit-backups/
+
+# Python Virtual Environments & Builds
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
