@@ -1,7 +1,7 @@
 # ag-init Windows Bootstrap Installer
 # Installs uv (if missing) and ag-init globally without requiring pre-installed Python.
 # Usage:
-#   powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/<org>/ag-init/main/install.ps1 | iex"
+#   powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.ps1 | iex"
 
 $ErrorActionPreference = 'Stop'
 
@@ -32,7 +32,7 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 Write-Host "[+] uv is available: $(uv --version)" -ForegroundColor Green
 
 # 2. Install ag-init
-$targetRepo = if ($env:AG_INIT_REPO) { $env:AG_INIT_REPO } else { "git+https://github.com/vudovn/ag-init.git" }
+$targetRepo = if ($env:AG_INIT_REPO) { $env:AG_INIT_REPO } else { "git+https://github.com/Ysn4Irix/ag-init.git" }
 Write-Host "[*] Installing ag-init from $targetRepo..." -ForegroundColor Cyan
 
 uv tool install --force $targetRepo

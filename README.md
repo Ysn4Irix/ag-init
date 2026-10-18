@@ -21,7 +21,7 @@ uvx ag-init
 Or run directly from a Git repository:
 
 ```bash
-uvx --from git+https://github.com/<org>/ag-init.git ag-init
+uvx --from git+https://github.com/Ysn4Irix/ag-init.git ag-init
 ```
 
 Or target a specific directory:
@@ -36,12 +36,12 @@ If **Python, uv, and pipx are NOT installed** on the system, run this single com
 
 **Windows (PowerShell):**
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/<org>/ag-init/main/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.ps1 | iex"
 ```
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/ag-init/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.sh | sh
 ```
 
 *(This automatically installs standalone `uv`, which pulls an isolated, sandboxed Python environment on demand without touching system packages).*
@@ -52,13 +52,13 @@ Install `ag-init` permanently as a global CLI tool:
 
 ```bash
 # 1. Directly from a Git repository:
-uv tool install git+https://github.com/<org>/ag-init.git
+uv tool install git+https://github.com/Ysn4Irix/ag-init.git
 # or with pipx:
-pipx install git+https://github.com/<org>/ag-init.git
+pipx install git+https://github.com/Ysn4Irix/ag-init.git
 
 # 2. Or using the built-in installer:
 ag-init install
-ag-init install --git https://github.com/<org>/ag-init.git
+ag-init install --git https://github.com/Ysn4Irix/ag-init.git
 
 # Install in editable mode from local checkout
 ag-init install --editable

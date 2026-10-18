@@ -2,7 +2,7 @@
 # ag-init Unix Bootstrap Installer
 # Installs uv (if missing) and ag-init globally without requiring pre-installed Python.
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/<org>/ag-init/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.sh | sh
 
 set -e
 
@@ -27,7 +27,7 @@ fi
 echo "[+] uv is available: $(uv --version)"
 
 # 2. Install ag-init
-TARGET_REPO="${AG_INIT_REPO:-git+https://github.com/vudovn/ag-init.git}"
+TARGET_REPO="${AG_INIT_REPO:-git+https://github.com/Ysn4Irix/ag-init.git}"
 echo "[*] Installing ag-init from $TARGET_REPO..."
 
 uv tool install --force "$TARGET_REPO"

@@ -44,12 +44,12 @@ If the target machine does **not have Python, uv, or pipx installed**, you can b
 
 ### Windows (PowerShell)
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/<org>/ag-init/main/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.ps1 | iex"
 ```
 
 ### macOS / Linux (Bash)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/ag-init/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Ysn4Irix/ag-init/main/install.sh | sh
 ```
 
 **How it works:**
