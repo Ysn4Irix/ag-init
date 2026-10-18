@@ -94,3 +94,15 @@ uvx ag-init rules add <rule-id>
 # Re-sync installed rules with latest templates
 uvx ag-init rules sync
 ```
+
+## CI/CD & Release Workflow
+
+This project adheres to strict version control and automated release standards:
+
+- **CI Matrix**: Automated testing on every PR and push across Python 3.10–3.14 on Linux and Windows via GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+- **Versioning**: Semantic Versioning (`MAJOR.MINOR.PATCH`) with [Conventional Commits](https://www.conventionalcommits.org/).
+  - `feat:` bumps **MINOR**
+  - `fix:`, `docs:`, `refactor:`, `test:` bump **PATCH**
+  - `BREAKING CHANGE:` bumps **MAJOR**
+- **Automated Releases**: Pushing a tag `v*.*.*` automatically triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), building wheels/sdist and publishing a tagged GitHub Release with changelog and build artifacts.
+- **Remote Policy**: Changes are committed locally. Pushes or publishing to remotes require explicit authorization.
