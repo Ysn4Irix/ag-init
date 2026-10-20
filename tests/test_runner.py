@@ -158,6 +158,31 @@ def test_run_ag_kit_fallback_npx(tmp_path: Path, mocker):
     assert mock_run.call_args[0][0][2] == "@vudovn/ag-kit"
 
 
+def test_copy_bundled_agents(tmp_path: Path):
+    from ag_init.runner import copy_bundled_agents
+    count = copy_bundled_agents(tmp_path)
+    assert count > 0
+    assert (tmp_path / ".agents" / "antigravity.json").exists()
+    assert (tmp_path / ".agents" / "agent").is_dir()
+    assert (tmp_path / ".agents" / "workflows").is_dir()
+
+
+def test_run_ag_kit_fallback_to_bundled_on_error(tmp_path: Path, mocker):
+    mocker.patch("shutil.which", return_value=None)
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=1,
+        stdout="",
+        stderr="Failed to download template github:vudovn/ag-kit",
+    )
+
+    success, msg = run_ag_kit(tmp_path, force=True)
+    assert success is True
+    assert "offline template" in msg
+    assert (tmp_path / ".agents" / "antigravity.json").exists()
+
+
 def test_run_command_timeout(tmp_path: Path, mocker):
     def timeout_func(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd=["sleep"], timeout=1)

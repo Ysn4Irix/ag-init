@@ -172,18 +172,23 @@ def main(
             console.print("  [dim][dry-run][/dim] Would install: [cyan]antislop-ai skills into .agents/skills/[/cyan]")
 
         # Step B: ag-kit init
-        if prereqs.node_available and prereqs.npx_available:
-            if not dry_run:
+        if not dry_run:
+            if prereqs.node_available and prereqs.npx_available:
                 with console.status("[bold green]Executing ag-kit init...[/bold green]"):
                     ok, msg = run_ag_kit(target_dir, force=force)
                 if ok:
-                    console.print("  [green][+][/green] ag-kit .agents initialized successfully")
+                    console.print(f"  [green][+][/green] ag-kit: {msg}")
                 else:
                     console.print(f"  [yellow][!] ag-kit non-zero exit: {msg.strip()}[/yellow]")
             else:
-                console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f --strategy merge[/cyan]")
+                from ag_init.runner import copy_bundled_agents
+                copied = copy_bundled_agents(target_dir)
+                if copied > 0:
+                    console.print(f"  [green][+][/green] ag-kit: .agents initialized from offline template ({copied} files)")
+                else:
+                    console.print("  [yellow][>] Skipping ag-kit init due to missing Node/npx environment[/yellow]")
         else:
-            console.print("  [yellow][>] Skipping ag-kit init due to missing Node/npx environment[/yellow]")
+            console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f -q --strategy merge[/cyan]")
 
     # 3. Discover and Filter Rules
     registry = RuleRegistry(custom_rules_dir=rules_dir)

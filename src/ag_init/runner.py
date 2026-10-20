@@ -60,22 +60,28 @@ def run_command(
     cwd: Optional[Path] = None,
     timeout: int = 120,
 ) -> Tuple[int, str, str]:
-    """Execute a system command safely with output capture."""
+    """Execute a system command safely with output capture, UTF-8 decoding, and closed stdin."""
     exec_cwd = str(cwd) if cwd else None
     is_windows = os.name == "nt"
 
-    # Use shell=True on Windows to correctly resolve .cmd and .ps1 script wrappers
+    # Always use UTF-8 with replace error handler and closed stdin to prevent
+    # character decode crashes on Windows and prompt hangs on redirected pipes.
     try:
         process = subprocess.run(
             cmd,
             cwd=exec_cwd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdin=subprocess.DEVNULL,
             shell=is_windows,
             timeout=timeout,
-            env=dict(os.environ, CI="true"),
+            env=dict(os.environ, CI="true", FORCE_COLOR="0", PYTHONIOENCODING="utf-8"),
         )
-        return process.returncode, process.stdout, process.stderr
+        stdout = process.stdout or ""
+        stderr = process.stderr or ""
+        return process.returncode, stdout, stderr
     except subprocess.TimeoutExpired:
         return -1, "", f"Command timed out after {timeout} seconds: {' '.join(cmd)}"
     except Exception as exc:
@@ -224,19 +230,45 @@ def run_antislop(
     return True, f"Installed antislop skills from {source}"
 
 
+def get_bundled_agents_dir() -> Path:
+    """Return path to bundled .agents template directory."""
+    return Path(__file__).resolve().parent / "templates" / "agents_template"
+
+
+def copy_bundled_agents(target_dir: Path) -> int:
+    """Copy bundled .agents template tree into target_dir/.agents, merging files safely."""
+    bundled_dir = get_bundled_agents_dir()
+    if not bundled_dir.is_dir():
+        return 0
+
+    dest_agent_dir = target_dir / ".agents"
+    dest_agent_dir.mkdir(parents=True, exist_ok=True)
+    copied = 0
+
+    for root, _dirs, files in os.walk(bundled_dir):
+        rel_path = Path(root).relative_to(bundled_dir)
+        sub_dir = dest_agent_dir / rel_path
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        for f in files:
+            dest_file = sub_dir / f
+            if not dest_file.exists():
+                shutil.copy2(Path(root) / f, dest_file)
+                copied += 1
+
+    return copied
+
+
 def run_ag_kit(
     target_dir: Path,
     force: bool = True,
     strategy: str = "merge",
-    timeout: int = 120,
+    timeout: int = 35,
 ) -> Tuple[bool, str]:
-    """Execute `ag-kit init` or fallback to `npx @vudovn/ag-kit init`."""
+    """Execute `ag-kit init` with quiet flags, falling back gracefully to bundled template if offline/stuck."""
     has_global = shutil.which("ag-kit") is not None
 
-    args = ["init"]
-    if force:
-        args.append("-f")
-    args.extend(["-p", str(target_dir.resolve()), "--strategy", strategy])
+    # Always pass --force and --quiet to prevent interactive readline prompts and ora spinners
+    args = ["init", "--force", "--quiet", "-p", str(target_dir.resolve()), "--strategy", strategy]
 
     if has_global:
         cmd = ["ag-kit"] + args
@@ -245,5 +277,12 @@ def run_ag_kit(
 
     ret_code, stdout, stderr = run_command(cmd, cwd=target_dir, timeout=timeout)
     if ret_code == 0:
-        return True, stdout
+        return True, stdout.strip() or "ag-kit .agents initialized successfully"
+
+    # Upstream failed or timed out; fall back to pre-bundled .agents template
+    copied = copy_bundled_agents(target_dir)
+    if copied > 0:
+        reason = (stderr or stdout or "network timeout").strip()[:80]
+        return True, f"ag-kit .agents initialized from offline template ({copied} files, upstream fallback: {reason})"
+
     return False, stderr or stdout or "ag-kit init failed with non-zero exit code"
