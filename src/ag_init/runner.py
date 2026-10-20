@@ -267,8 +267,8 @@ def run_ag_kit(
     """Execute `ag-kit init` with quiet flags, falling back gracefully to bundled template if offline/stuck."""
     has_global = shutil.which("ag-kit") is not None
 
-    # Always pass --force and --quiet to prevent interactive readline prompts and ora spinners
-    args = ["init", "--force", "--quiet", "-p", str(target_dir.resolve()), "--strategy", strategy]
+    # Always pass --force, --quiet, and --no-backup to prevent prompts, spinners, and backup folders
+    args = ["init", "--force", "--quiet", "--no-backup", "-p", str(target_dir.resolve()), "--strategy", strategy]
 
     if has_global:
         cmd = ["ag-kit"] + args

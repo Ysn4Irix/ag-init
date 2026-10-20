@@ -2,9 +2,24 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 from pathlib import Path
 from typing import List, Tuple
 from ag_init.runner import run_command
+
+
+def cleanup_backup_directories(target_dir: Path, dry_run: bool = False) -> List[str]:
+    """Remove .ag-init-backups and .ag-kit-backups folders after installation."""
+    backup_dirs = [".ag-init-backups", ".ag-kit-backups"]
+    removed: List[str] = []
+    for b_name in backup_dirs:
+        b_path = target_dir / b_name
+        if b_path.exists() and b_path.is_dir():
+            if not dry_run:
+                shutil.rmtree(b_path, ignore_errors=True)
+            removed.append(b_name)
+    return removed
 
 
 def setup_gitignore(target_dir: Path, dry_run: bool = False) -> Tuple[bool, List[str]]:

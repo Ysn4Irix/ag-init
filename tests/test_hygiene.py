@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from ag_init.hygiene import (
+    cleanup_backup_directories,
     initialize_git_if_requested,
     setup_docs_directory,
     setup_gitignore,
@@ -66,3 +67,27 @@ def test_initialize_git_if_requested(tmp_path: Path, mocker):
     mock_run.reset_mock()
     assert initialize_git_if_requested(tmp_path, git_init=False) is False
     assert not mock_run.called
+
+
+def test_cleanup_backup_directories(tmp_path: Path):
+    init_backup = tmp_path / ".ag-init-backups"
+    kit_backup = tmp_path / ".ag-kit-backups"
+    init_backup.mkdir()
+    kit_backup.mkdir()
+    (init_backup / "dummy.txt").write_text("backup")
+    (kit_backup / "dummy.txt").write_text("backup")
+
+    # Dry run should not delete
+    removed_dry = cleanup_backup_directories(tmp_path, dry_run=True)
+    assert set(removed_dry) == {".ag-init-backups", ".ag-kit-backups"}
+    assert init_backup.exists()
+    assert kit_backup.exists()
+
+    # Real run should delete
+    removed_real = cleanup_backup_directories(tmp_path, dry_run=False)
+    assert set(removed_real) == {".ag-init-backups", ".ag-kit-backups"}
+    assert not init_backup.exists()
+    assert not kit_backup.exists()
+
+    # Re-running on empty should return empty list
+    assert cleanup_backup_directories(tmp_path, dry_run=False) == []

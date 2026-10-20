@@ -14,6 +14,7 @@ from rich.table import Table
 
 from ag_init import __version__
 from ag_init.hygiene import (
+    cleanup_backup_directories,
     initialize_git_if_requested,
     setup_docs_directory,
     setup_gitignore,
@@ -225,9 +226,6 @@ def main(
         dry_run=dry_run,
     )
 
-    if merge_res.backup_path:
-        console.print(f"  [dim][+] Backed up existing AGENTS.md to {merge_res.backup_path.name}[/dim]")
-
     if merge_res.rules_added:
         console.print(f"  [green][+] Added rules to AGENTS.md:[/green] {', '.join(merge_res.rules_added)}")
     if merge_res.rules_updated:
@@ -246,7 +244,12 @@ def main(
     if git_init_done:
         console.print("  [green][+] Initialized git repository[/green]")
 
-    # 6. Completion Summary Table
+    # 6. Cleanup temporary backup directories (.ag-init-backups and .ag-kit-backups)
+    removed_backups = cleanup_backup_directories(target_dir, dry_run=dry_run)
+    if removed_backups:
+        console.print(f"  [dim][+] Cleaned up backup folders: {', '.join(removed_backups)}[/dim]")
+
+    # 7. Completion Summary Table
     table = Table(title="Workspace Configuration Summary", border_style="dim")
     table.add_column("Component", style="bold")
     table.add_column("Status", style="green")
