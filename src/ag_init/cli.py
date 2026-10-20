@@ -159,31 +159,31 @@ def main(
         console.print(f"[yellow]⚠️  {warning}[/yellow]")
 
     # 2. Run Upstream tools (antislop-ai & ag-kit)
-    can_run_upstream = not skip_upstream and prereqs.node_available and prereqs.npx_available
-    if can_run_upstream:
-        # Step A: antislop-ai
+    if not skip_upstream:
+        # Step A: antislop-ai (installed non-interactively via npm unpack or bundled templates)
         if not dry_run:
-            with console.status("[bold green]Executing npx antislop-ai...[/bold green]"):
+            with console.status("[bold green]Installing antislop-ai skills...[/bold green]"):
                 ok, msg = run_antislop(target_dir)
             if ok:
-                console.print("  [green][+][/green] antislop-ai initialized successfully")
+                console.print(f"  [green][+][/green] antislop-ai: {msg}")
             else:
-                console.print(f"  [yellow][!] antislop-ai non-zero exit: {msg.strip()}[/yellow]")
+                console.print(f"  [yellow][!] antislop-ai: {msg.strip()}[/yellow]")
         else:
-            console.print("  [dim][dry-run][/dim] Would execute: [cyan]npx --yes antislop-ai[/cyan]")
+            console.print("  [dim][dry-run][/dim] Would install: [cyan]antislop-ai skills into .agents/skills/[/cyan]")
 
         # Step B: ag-kit init
-        if not dry_run:
-            with console.status("[bold green]Executing ag-kit init...[/bold green]"):
-                ok, msg = run_ag_kit(target_dir, force=force)
-            if ok:
-                console.print("  [green][+][/green] ag-kit .agents initialized successfully")
+        if prereqs.node_available and prereqs.npx_available:
+            if not dry_run:
+                with console.status("[bold green]Executing ag-kit init...[/bold green]"):
+                    ok, msg = run_ag_kit(target_dir, force=force)
+                if ok:
+                    console.print("  [green][+][/green] ag-kit .agents initialized successfully")
+                else:
+                    console.print(f"  [yellow][!] ag-kit non-zero exit: {msg.strip()}[/yellow]")
             else:
-                console.print(f"  [yellow][!] ag-kit non-zero exit: {msg.strip()}[/yellow]")
+                console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f --strategy merge[/cyan]")
         else:
-            console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f --strategy merge[/cyan]")
-    elif not skip_upstream:
-        console.print("  [yellow][>] Skipping upstream npm tools due to missing Node/npx environment[/yellow]")
+            console.print("  [yellow][>] Skipping ag-kit init due to missing Node/npx environment[/yellow]")
 
     # 3. Discover and Filter Rules
     registry = RuleRegistry(custom_rules_dir=rules_dir)
@@ -262,7 +262,7 @@ def main(
         "Ready",
         "docs/ directory available",
     )
-    if can_run_upstream:
+    if not skip_upstream:
         table.add_row(
             "Agent Tree",
             "Installed",
