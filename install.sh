@@ -34,5 +34,11 @@ uv tool install --force "$TARGET_REPO"
 
 echo ""
 echo "[+] ag-init installed successfully!"
+
+# 3. Initialize user global rules directory
+GLOBAL_RULES_DIR="${HOME}/.config/ag-init/rules"
+mkdir -p "$GLOBAL_RULES_DIR"
+echo "[+] Global rules directory ready at: $GLOBAL_RULES_DIR"
+
 echo "[+] You can now run: ag-init --help"
 echo ""

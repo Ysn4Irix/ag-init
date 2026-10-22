@@ -50,7 +50,7 @@ class RuleRegistry:
             self._scan_directory(builtin_dir, source="builtin")
 
         # 2. Global user rules (~/.config/ag-init/rules or %APPDATA%/ag-init/rules)
-        global_dir = self.get_global_config_dir() / "rules"
+        global_dir = self.ensure_global_rules_dir()
         if global_dir.is_dir():
             self._scan_directory(global_dir, source="global")
 
@@ -58,8 +58,8 @@ class RuleRegistry:
         if self.custom_rules_dir and self.custom_rules_dir.is_dir():
             self._scan_directory(self.custom_rules_dir, source="custom")
 
-    @staticmethod
-    def get_global_config_dir() -> Path:
+    @classmethod
+    def get_global_config_dir(cls) -> Path:
         """Return cross-platform configuration directory."""
         if os.name == "nt":
             appdata = os.environ.get("APPDATA")
@@ -67,8 +67,20 @@ class RuleRegistry:
                 return Path(appdata) / "ag-init"
         return Path.home() / ".config" / "ag-init"
 
+    @classmethod
+    def ensure_global_rules_dir(cls) -> Path:
+        """Ensure global user rules directory exists."""
+        rules_dir = cls.get_global_config_dir() / "rules"
+        try:
+            rules_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        return rules_dir
+
     def _scan_directory(self, directory: Path, source: str) -> None:
         for file in sorted(directory.glob("*.md")):
+            if file.name.lower() in ("readme.md", "license.md"):
+                continue
             try:
                 rule = self.load_rule_from_file(file, default_source=source)
                 self.rules[rule.id] = rule

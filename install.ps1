@@ -38,4 +38,12 @@ Write-Host "[*] Installing ag-init from $targetRepo..." -ForegroundColor Cyan
 uv tool install --force $targetRepo
 
 Write-Host "`n[+] ag-init installed successfully!" -ForegroundColor Green
+
+# 3. Initialize user global rules directory
+$globalRulesDir = "$env:APPDATA\ag-init\rules"
+if (-not (Test-Path $globalRulesDir)) {
+    New-Item -ItemType Directory -Force -Path $globalRulesDir | Out-Null
+}
+
+Write-Host "[+] Global rules directory ready at: $globalRulesDir" -ForegroundColor DarkGray
 Write-Host "[+] You can now run: ag-init --help`n" -ForegroundColor Cyan
