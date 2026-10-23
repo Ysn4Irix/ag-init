@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ag-init"
-version = "0.1.1"
+version = "0.1.2"
 description = "Automated workspace initializer for Google Antigravity and Gemini CLI agents"
 readme = "README.md"
 requires-python = ">=3.10"

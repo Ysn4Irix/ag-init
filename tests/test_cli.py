@@ -109,3 +109,40 @@ def test_cli_rules_add_and_sync(tmp_path: Path):
     res_sync = runner.invoke(app, ["rules", "sync", "--path", str(target)])
     assert res_sync.exit_code == 0
     assert "Synced 1 rule(s)" in res_sync.stdout
+
+
+def test_rich_unicode_compatibility():
+    """Verify rich doesn't crash with ModuleNotFoundError for Unicode 17.0.0 on Python 3.14+."""
+    import os
+    import rich._unicode_data
+    from rich.console import Console
+    from ag_init._compat import patch_rich_unicode
+
+    patch_rich_unicode()
+    assert "UNICODE_VERSION" in os.environ
+
+    # Directly test loading an unsupported Unicode version triggers safe fallback
+    loaded = rich._unicode_data.load("17.0.0")
+    assert loaded is not None
+
+    # Verify Console printing with unicode and symbols works without exception
+    c = Console()
+    c.print("Unicode symbols: ✓ • — ╔═╗ 🚀 [bold green]OK[/bold green]")
+
+
+def test_cli_uninstall_dry_run():
+    result = runner.invoke(app, ["uninstall", "--dry-run"])
+    assert result.exit_code == 0
+    assert "Uninstalling ag-init..." in result.stdout
+    assert "Command:" in result.stdout
+
+
+def test_cli_uninstall_mocked(mocker):
+    mocker.patch(
+        "ag_init.cli.uninstall_ag_init",
+        return_value=(True, "Uninstalled 1 package", ["uv", "tool", "uninstall", "ag-init"]),
+    )
+    result = runner.invoke(app, ["uninstall"])
+    assert result.exit_code == 0
+    assert "ag-init uninstalled successfully." in result.stdout
+

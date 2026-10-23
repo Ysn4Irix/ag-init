@@ -7,6 +7,10 @@ import re
 import sys
 from pathlib import Path
 from typing import List, Optional
+
+# Apply Python 3.14+ Rich unicode compatibility patch before importing typer or rich
+import ag_init._compat  # noqa: F401
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -517,5 +521,5 @@ def uninstall_cmd(
 
     console.print(f"  [green][+][/green] Command: [dim]{' '.join(cmd)}[/dim]")
     if output and not dry_run:
-        console.print(output)
+        console.print(output, markup=False)
     console.print("[bold green][+] ag-init uninstalled successfully.[/bold green]")
