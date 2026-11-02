@@ -99,11 +99,13 @@ def test_install_ag_init_execution_mocked(tmp_path: Path, mocker):
 
 
 def test_cli_install_command_dry_run():
+    import re
     result = runner.invoke(app, ["install", "--dry-run"])
     assert result.exit_code == 0
-    assert "ag-init Package Installer" in result.stdout
-    assert "DRY RUN" in result.stdout
-    assert "Command:" in result.stdout
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "ag-init Package Installer" in clean_stdout
+    assert "DRY RUN" in clean_stdout
+    assert "Command:" in clean_stdout
 
 
 def test_resolve_install_source_git():

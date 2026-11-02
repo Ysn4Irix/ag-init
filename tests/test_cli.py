@@ -38,7 +38,8 @@ def test_cli_dry_run(tmp_path: Path):
     target = tmp_path / "scratch_project"
     result = runner.invoke(app, ["--path", str(target), "--dry-run"])
     assert result.exit_code == 0
-    assert "DRY RUN" in result.stdout
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "DRY RUN" in clean_stdout
     assert not target.exists()
 
 
@@ -160,9 +161,10 @@ def test_cli_uninstall_failure_mocked(mocker):
 def test_cli_update_workspace_dry_run(tmp_path: Path):
     result = runner.invoke(app, ["update", "-p", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0
-    assert "Antigravity Workspace Updater" in result.stdout
-    assert "DRY RUN" in result.stdout
-    assert "Workspace Update Summary" in result.stdout
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "Antigravity Workspace Updater" in clean_stdout
+    assert "DRY RUN" in clean_stdout
+    assert "Workspace Update Summary" in clean_stdout
 
 
 def test_cli_update_workspace_mocked(tmp_path: Path, mocker):

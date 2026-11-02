@@ -150,11 +150,11 @@ def main(
         return
 
     target_dir = path.resolve()
+    dry_badge = " [bold red](DRY RUN)[/bold red]" if dry_run else ""
     console.print(
         Panel(
-            f"[bold cyan]Antigravity Workspace Initializer[/bold cyan] [dim]v{__version__}[/dim]\n"
-            f"[dim]Target:[/dim] [yellow]{target_dir}[/yellow]"
-            + (" [bold red](DRY RUN)[/bold red]" if dry_run else ""),
+            f"[bold cyan]Antigravity Workspace Initializer[/bold cyan] [dim]v{__version__}[/dim]{dry_badge}\n"
+            f"[dim]Target:[/dim] [yellow]{target_dir}[/yellow]",
             border_style="cyan",
         )
     )
@@ -454,10 +454,10 @@ def install_cmd(
     ),
 ):
     """Install ag-init globally on your system using uv tool, pipx, or pip."""
+    dry_badge = " [bold red](DRY RUN)[/bold red]" if dry_run else ""
     console.print(
         Panel(
-            f"[bold cyan]ag-init Package Installer[/bold cyan] [dim]v{__version__}[/dim]\n"
-            + (" [bold red](DRY RUN)[/bold red]" if dry_run else ""),
+            f"[bold cyan]ag-init Package Installer[/bold cyan] [dim]v{__version__}[/dim]{dry_badge}",
             border_style="cyan",
         )
     )
@@ -616,11 +616,11 @@ def update_cmd(
         return
 
     target_dir = path.resolve()
+    dry_badge = " [bold red](DRY RUN)[/bold red]" if dry_run else ""
     console.print(
         Panel(
-            f"[bold cyan]Antigravity Workspace Updater[/bold cyan] [dim]v{__version__}[/dim]\n"
-            f"[dim]Target: {target_dir}[/dim]"
-            + (" [bold red](DRY RUN)[/bold red]" if dry_run else ""),
+            f"[bold cyan]Antigravity Workspace Updater[/bold cyan] [dim]v{__version__}[/dim]{dry_badge}\n"
+            f"[dim]Target: {target_dir}[/dim]",
             border_style="cyan",
         )
     )
