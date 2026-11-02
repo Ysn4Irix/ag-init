@@ -38,7 +38,7 @@
   - Verification: Mocked unit tests verifying execution, exit code handling, and fallback behavior.
 
 - [x] **Task 4: Git & Directory Hygiene (`hygiene.py`)**
-  - Implement `.gitignore` updater: ensure `.agents/` and `.ag-kit-backups/` are ignored.
+  - Implement `.gitignore` updater: ensure `.ag-init-backups/` and `.ag-kit-backups/` are ignored.
   - Ensure `docs/` directory exists.
   - Verification: Unit tests verifying `.gitignore` appending without duplicates.
 

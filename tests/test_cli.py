@@ -86,7 +86,8 @@ def test_cli_init_full(tmp_path: Path, mocker):
     gitignore = target / ".gitignore"
     assert gitignore.exists()
     git_content = gitignore.read_text(encoding="utf-8")
-    assert ".agents/" in git_content
+    assert ".ag-init-backups/" in git_content
+    assert ".agents/" not in git_content
 
     # Verify docs
     docs_dir = target / "docs"

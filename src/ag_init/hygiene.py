@@ -23,32 +23,50 @@ def cleanup_backup_directories(target_dir: Path, dry_run: bool = False) -> List[
 
 
 def setup_gitignore(target_dir: Path, dry_run: bool = False) -> Tuple[bool, List[str]]:
-    """Ensure .agents/ and .ag-init-backups/ are ignored in .gitignore."""
+    """Ensure backup directories are ignored and .agents/ is NOT ignored in .gitignore."""
     gitignore_path = target_dir / ".gitignore"
-    required_entries = [".agents/", ".ag-init-backups/"]
+    required_entries = [".ag-init-backups/", ".ag-kit-backups/"]
     added_entries: List[str] = []
 
     existing_lines: List[str] = []
     if gitignore_path.exists():
         existing_lines = gitignore_path.read_text(encoding="utf-8").splitlines()
 
+    # Filter out .agents/ or .agents if present
+    cleaned_lines: List[str] = []
+    removed_any = False
+    for line in existing_lines:
+        if line.strip() in (".agents", ".agents/"):
+            removed_any = True
+            continue
+        cleaned_lines.append(line)
+
     # Normalize lines for comparison
-    normalized_existing = {line.strip().rstrip("/") for line in existing_lines if line.strip() and not line.strip().startswith("#")}
+    normalized_existing = {
+        line.strip().rstrip("/")
+        for line in cleaned_lines
+        if line.strip() and not line.strip().startswith("#")
+    }
 
     for entry in required_entries:
         key = entry.rstrip("/")
         if key not in normalized_existing:
             added_entries.append(entry)
 
-    if added_entries and not dry_run:
-        content_to_append = "\n# Antigravity Kit & Backups\n" + "\n".join(added_entries) + "\n"
-        if existing_lines and existing_lines[-1].strip():
-            content_to_append = "\n" + content_to_append
+    modified = removed_any or bool(added_entries)
 
-        with gitignore_path.open("a", encoding="utf-8") as f:
-            f.write(content_to_append)
+    if modified and not dry_run:
+        final_lines = list(cleaned_lines)
+        if added_entries:
+            if final_lines and final_lines[-1].strip():
+                final_lines.append("")
+            final_lines.append("# Antigravity Backups")
+            final_lines.extend(added_entries)
 
-    return bool(added_entries), added_entries
+        content = "\n".join(final_lines).rstrip() + "\n"
+        gitignore_path.write_text(content, encoding="utf-8")
+
+    return modified, added_entries
 
 
 def setup_docs_directory(target_dir: Path, dry_run: bool = False) -> bool:

@@ -348,7 +348,7 @@ def main(
     table.add_row(
         ".gitignore",
         "Protected",
-        "Ignoring .agents/ and .ag-kit-backups/",
+        "Ignoring .ag-init-backups/ and .ag-kit-backups/",
     )
     table.add_row(
         "Docs Directory",

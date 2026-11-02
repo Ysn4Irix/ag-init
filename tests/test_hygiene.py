@@ -12,35 +12,35 @@ from ag_init.hygiene import (
 def test_setup_gitignore_create(tmp_path: Path):
     modified, added = setup_gitignore(tmp_path)
     assert modified is True
-    assert ".agents/" in added
     assert ".ag-init-backups/" in added
+    assert ".agents/" not in added
 
     gitignore = tmp_path / ".gitignore"
     assert gitignore.exists()
     content = gitignore.read_text(encoding="utf-8")
-    assert ".agents/" in content
+    assert ".agents/" not in content
     assert ".ag-init-backups/" in content
 
 
 def test_setup_gitignore_already_present(tmp_path: Path):
     gitignore = tmp_path / ".gitignore"
-    gitignore.write_text(".agents/\n.ag-init-backups/\nnode_modules/\n", encoding="utf-8")
+    gitignore.write_text(".ag-init-backups/\n.ag-kit-backups/\nnode_modules/\n", encoding="utf-8")
 
     modified, added = setup_gitignore(tmp_path)
     assert modified is False
     assert len(added) == 0
 
 
-def test_setup_gitignore_partial(tmp_path: Path):
+def test_setup_gitignore_removes_agents(tmp_path: Path):
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text(".agents/\nnode_modules/\n", encoding="utf-8")
 
     modified, added = setup_gitignore(tmp_path)
     assert modified is True
-    assert added == [".ag-init-backups/"]
+    assert ".ag-init-backups/" in added
 
     content = gitignore.read_text(encoding="utf-8")
-    assert ".agents/" in content
+    assert ".agents" not in content
     assert ".ag-init-backups/" in content
     assert "node_modules/" in content
 

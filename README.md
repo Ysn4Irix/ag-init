@@ -8,7 +8,7 @@ Automated workspace initializer for Google Antigravity and Gemini CLI agents.
 1. **Antislop Protection**: Installs and configures anti-slop rules via `npx antislop-ai`.
 2. **AG Kit Core**: Merges and installs `.agents/` agents, skills, and memory systems via `ag-kit init`.
 3. **Smart Rule Assembly**: Deterministically injects and updates opinionated team rules into `AGENTS.md` using scoped tags.
-4. **Workspace Hygiene**: Configures `.gitignore` (ignoring `.agents/` and `.ag-kit-backups/`) and ensures `docs/` structure.
+4. **Workspace Hygiene**: Configures `.gitignore` (ignoring `.ag-init-backups/` and `.ag-kit-backups/`) and ensures `docs/` structure.
 
 ## Quick Start (Zero-Install)
 
