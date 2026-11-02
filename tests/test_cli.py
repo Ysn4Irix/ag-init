@@ -147,6 +147,16 @@ def test_cli_uninstall_mocked(mocker):
     assert "ag-init uninstalled successfully." in result.stdout
 
 
+def test_cli_uninstall_failure_mocked(mocker):
+    mocker.patch(
+        "ag_init.cli.uninstall_ag_init",
+        return_value=(False, "Permission denied", ["uv", "tool", "uninstall", "ag-init"]),
+    )
+    result = runner.invoke(app, ["uninstall"])
+    assert result.exit_code == 1
+    assert "Uninstallation failed: Permission denied" in result.output
+
+
 def test_cli_update_workspace_dry_run(tmp_path: Path):
     result = runner.invoke(app, ["update", "-p", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0

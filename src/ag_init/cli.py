@@ -520,13 +520,24 @@ def uninstall_cmd(
     success, output, cmd = uninstall_ag_init(backend=backend, dry_run=dry_run)
 
     if not success:
-        console.print(f"[bold red]Uninstallation failed:[/bold red] {output}")
-        raise typer.Exit(code=1)
+        sys.excepthook = sys.__excepthook__
+        print(f"[-] Uninstallation failed: {output}", file=sys.stderr)
+        sys.exit(1)
 
-    console.print(f"  [green][+][/green] Command: [dim]{' '.join(cmd)}[/dim]")
-    if output and not dry_run:
-        console.print(output, markup=False)
-    console.print("[bold green][+] ag-init uninstalled successfully.[/bold green]")
+    if dry_run:
+        console.print(f"  [green][+][/green] Command: [dim]{' '.join(cmd)}[/dim]")
+        if output:
+            console.print(output, markup=False)
+        console.print("[bold green][+] ag-init uninstalled successfully.[/bold green]")
+    else:
+        # The virtual environment files have just been deleted from disk by the uninstaller.
+        # Use standard library print and exit immediately to prevent any lazy disk imports.
+        print(f"  [+] Command: {' '.join(cmd)}")
+        if output:
+            print(output)
+        print("[+] ag-init uninstalled successfully.")
+        sys.excepthook = sys.__excepthook__
+        sys.exit(0)
 
 
 @app.command("update")

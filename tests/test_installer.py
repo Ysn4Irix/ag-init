@@ -129,6 +129,54 @@ def test_cli_uninstall_command_dry_run():
     assert "Command:" in result.stdout
 
 
+def test_uninstall_ag_init_dry_run(monkeypatch):
+    monkeypatch.setattr("ag_init.installer.detect_available_backends", lambda: ["uv"])
+    success, output, cmd = uninstall_ag_init(dry_run=True)
+    assert success is True
+    assert "uv tool uninstall ag-init" in " ".join(cmd)
+    assert "[dry-run]" in output
+
+
+def test_uninstall_ag_init_execution_mocked(monkeypatch, mocker):
+    monkeypatch.setattr("ag_init.installer.detect_available_backends", lambda: ["uv"])
+    mocker.patch("ag_init.installer.run_command", return_value=(0, "Uninstalled 1 executable: ag-init", ""))
+
+    success, output, cmd = uninstall_ag_init()
+    assert success is True
+    assert "Uninstalled" in output
+    assert "uv tool uninstall ag-init" in " ".join(cmd)
+
+
+def test_uninstall_ag_init_no_backend(monkeypatch):
+    monkeypatch.setattr("ag_init.installer.detect_available_backends", lambda: [])
+    success, output, cmd = uninstall_ag_init()
+    assert success is False
+    assert "No package manager backend found" in output
+
+
+def test_prepare_windows_self_removal(tmp_path: Path, monkeypatch):
+    from ag_init.installer import _prepare_windows_self_removal
+
+    fake_scripts = tmp_path / "Scripts"
+    fake_scripts.mkdir()
+    fake_exe = fake_scripts / "test_prog.exe"
+    fake_exe.write_text("binary content", encoding="utf-8")
+
+    fake_bin = tmp_path / "bin" / "ag-init.exe"
+    fake_bin.parent.mkdir()
+    fake_bin.write_text("cli binary", encoding="utf-8")
+
+    monkeypatch.setattr("sys.platform", "win32")
+    monkeypatch.setattr("sys.prefix", str(tmp_path))
+    monkeypatch.setattr("shutil.which", lambda cmd: str(fake_bin) if cmd == "ag-init" else None)
+
+    _prepare_windows_self_removal()
+
+    # The original binaries in Scripts and bin should have been moved out
+    assert not fake_exe.exists()
+    assert not fake_bin.exists()
+
+
 def test_build_update_command():
     assert build_update_command("uv") == ["uv", "tool", "upgrade", "ag-init"]
     assert build_update_command("uv", source="git+https://github.com/org/repo.git") == [

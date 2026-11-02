@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -226,6 +227,51 @@ def install_ag_init(
     )
 
 
+def _prepare_windows_self_removal() -> None:
+    """On Windows, open executables lock their directories and prevent uninstallation.
+
+    Moving active binaries out of the virtualenv's Scripts directory and from .local/bin
+    into the system temporary directory frees the directory locks, allowing the package
+    manager to cleanly remove the virtual environment synchronously without Access Denied errors.
+    """
+    if sys.platform != "win32":
+        return
+
+    import tempfile
+
+    temp_dir = tempfile.gettempdir()
+
+    # 1. Move any executables in the current virtual environment's Scripts directory
+    scripts_dir = Path(sys.prefix) / "Scripts"
+    if scripts_dir.is_dir():
+        for exe_path in scripts_dir.glob("*.exe"):
+            try:
+                dest = Path(temp_dir) / f"ag_init_cleanup_{exe_path.name}"
+                if dest.exists():
+                    try:
+                        dest.unlink()
+                    except Exception:
+                        pass
+                exe_path.rename(dest)
+            except Exception:
+                pass
+
+    # 2. Also move the CLI launcher executable from user PATH (e.g. ~/.local/bin/ag-init.exe)
+    cli_bin = shutil.which("ag-init")
+    if cli_bin:
+        cli_path = Path(cli_bin)
+        try:
+            dest = Path(temp_dir) / f"ag_init_cleanup_bin_{cli_path.name}"
+            if dest.exists():
+                try:
+                    dest.unlink()
+                except Exception:
+                    pass
+            cli_path.rename(dest)
+        except Exception:
+            pass
+
+
 def uninstall_ag_init(
     backend: Optional[str] = None,
     dry_run: bool = False,
@@ -240,6 +286,9 @@ def uninstall_ag_init(
 
     if dry_run:
         return True, f"[dry-run] Would execute: {' '.join(cmd)}", cmd
+
+    if sys.platform == "win32":
+        _prepare_windows_self_removal()
 
     ret_code, stdout, stderr = run_command(cmd, timeout=60)
     success = ret_code == 0
