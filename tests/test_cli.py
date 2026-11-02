@@ -146,3 +146,50 @@ def test_cli_uninstall_mocked(mocker):
     assert result.exit_code == 0
     assert "ag-init uninstalled successfully." in result.stdout
 
+
+def test_cli_update_workspace_dry_run(tmp_path: Path):
+    result = runner.invoke(app, ["update", "-p", str(tmp_path), "--dry-run"])
+    assert result.exit_code == 0
+    assert "Antigravity Workspace Updater" in result.stdout
+    assert "DRY RUN" in result.stdout
+    assert "Workspace Update Summary" in result.stdout
+
+
+def test_cli_update_workspace_mocked(tmp_path: Path, mocker):
+    mocker.patch("ag_init.cli.run_antislop", return_value=(True, "Updated 6 skills"))
+    mocker.patch("ag_init.cli.run_ag_kit_update", return_value=(True, "Updated .agents tree"))
+
+    # Create dummy existing AGENTS.md
+    agents_md = tmp_path / "AGENTS.md"
+    agents_md.write_text("<!-- ag-init:rule:language:start -->\nOLD\n<!-- ag-init:rule:language:end -->\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["update", "-p", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "Workspace Update Summary" in result.stdout
+    assert "Project workspace update complete!" in result.stdout
+
+    # Verify AGENTS.md was synced and default rules were added
+    content = agents_md.read_text(encoding="utf-8")
+    assert "<!-- ag-init:rule:language:start -->" in content
+    assert "<!-- ag-init:rule:engineering-standards:start -->" in content
+    assert "<!-- ag-init:rule:github-cicd:start -->" in content
+
+
+def test_cli_update_self_dry_run():
+    result = runner.invoke(app, ["update", "--self", "--dry-run"])
+    assert result.exit_code == 0
+    assert "Updating ag-init globally..." in result.stdout
+    assert "Command:" in result.stdout
+    assert "ag-init updated successfully." in result.stdout
+
+
+def test_cli_update_self_mocked(mocker):
+    mocker.patch(
+        "ag_init.cli.update_ag_init",
+        return_value=(True, "Upgraded ag-init to 0.1.4", ["uv", "tool", "upgrade", "ag-init"]),
+    )
+    result = runner.invoke(app, ["update", "--self"])
+    assert result.exit_code == 0
+    assert "ag-init updated successfully." in result.stdout
+
+

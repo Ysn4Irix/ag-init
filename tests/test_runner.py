@@ -10,6 +10,7 @@ from ag_init.runner import (
     check_prerequisites,
     copy_bundled_skills,
     run_ag_kit,
+    run_ag_kit_update,
     run_antislop,
     run_command,
     update_antislop_pointer,
@@ -191,3 +192,52 @@ def test_run_command_timeout(tmp_path: Path, mocker):
     ret, stdout, stderr = run_command(["sleep"], cwd=tmp_path, timeout=1)
     assert ret == -1
     assert "timed out after 1 seconds" in stderr
+
+
+def test_run_ag_kit_update_global(tmp_path: Path, mocker):
+    mocker.patch("shutil.which", return_value="/bin/ag-kit")
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=0,
+        stdout="ag-kit updated",
+        stderr="",
+    )
+
+    success, msg = run_ag_kit_update(tmp_path)
+    assert success is True
+    assert mock_run.call_args[0][0][0] == "ag-kit"
+    assert "update" in mock_run.call_args[0][0]
+
+
+def test_run_ag_kit_update_fallback_npx(tmp_path: Path, mocker):
+    mocker.patch("shutil.which", return_value=None)
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=0,
+        stdout="npx ag-kit updated",
+        stderr="",
+    )
+
+    success, msg = run_ag_kit_update(tmp_path)
+    assert success is True
+    assert mock_run.call_args[0][0][0] == "npx"
+    assert mock_run.call_args[0][0][2] == "@vudovn/ag-kit"
+    assert "update" in mock_run.call_args[0][0]
+
+
+def test_run_ag_kit_update_fallback_bundled(tmp_path: Path, mocker):
+    mocker.patch("shutil.which", return_value=None)
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=1,
+        stdout="",
+        stderr="network timeout",
+    )
+
+    success, msg = run_ag_kit_update(tmp_path)
+    assert success is True
+    assert (tmp_path / ".agents").is_dir()
+

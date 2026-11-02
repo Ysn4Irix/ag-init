@@ -131,7 +131,7 @@ Project-wide instructions for AI coding agents. These rules apply unless a more 
 - Update setup, usage, configuration, architecture, and troubleshooting documentation when affected.
 - Document non-obvious decisions, important constraints, and operational procedures.
 - Never describe planned or placeholder functionality as implemented.
-- Keep Markdown documentation in `docs/`, except essential root-level files required by tools or platforms, including `README.md` and `AGENTS.md` `CHANGELOGS.md` etc..
+- Keep Markdown documentation in `docs/`, except essential root-level files required by tools or platforms, including `README.md` and `AGENTS.md` `CHANGELOG.md` etc..
 - Use the repository's existing documentation naming and organization conventions where possible.
 
 ## 12. Definition of Done

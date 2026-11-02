@@ -116,6 +116,23 @@ def build_uninstall_command(backend: str) -> List[str]:
         raise ValueError(f"Unsupported backend: {backend}")
 
 
+def build_update_command(backend: str, source: Optional[str] = None) -> List[str]:
+    """Construct update command line for the selected installer backend."""
+    if backend == "uv":
+        if source and source != "ag-init":
+            return ["uv", "tool", "install", "--force", source]
+        return ["uv", "tool", "upgrade", "ag-init"]
+    elif backend == "pipx":
+        if source and source != "ag-init":
+            return ["pipx", "install", "--force", source]
+        return ["pipx", "upgrade", "ag-init"]
+    elif backend == "pip":
+        target = source or "ag-init"
+        return ["pip", "install", "--user", "--upgrade", target]
+    else:
+        raise ValueError(f"Unsupported backend: {backend}")
+
+
 def verify_cli_path() -> Tuple[bool, Optional[str]]:
     """Check if ag-init is accessible on system PATH, and return guidance if not."""
     found = shutil.which("ag-init") is not None
@@ -228,3 +245,32 @@ def uninstall_ag_init(
     success = ret_code == 0
     output = stdout if success else (stderr or stdout)
     return success, output.strip(), cmd
+
+
+def update_ag_init(
+    source_path: Optional[Path | str] = None,
+    git_url: Optional[str] = None,
+    backend: Optional[str] = None,
+    dry_run: bool = False,
+) -> Tuple[bool, str, List[str]]:
+    """Execute update/upgrade of global ag-init package."""
+    available = detect_available_backends()
+    if not available:
+        return False, "No package manager backend found (checked uv, pipx, pip).", []
+
+    selected_backend = backend or available[0]
+    if selected_backend not in available:
+        return False, f"Selected backend '{selected_backend}' is not installed or available on PATH.", []
+
+    source, is_local = resolve_install_source(source_path, git_url=git_url)
+    custom_source = source if (git_url or (source_path and is_local)) else None
+    cmd = build_update_command(selected_backend, source=custom_source)
+
+    if dry_run:
+        return True, f"[dry-run] Would execute: {' '.join(cmd)}", cmd
+
+    ret_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = ret_code == 0
+    output = stdout if success else (stderr or stdout)
+    return success, output.strip(), cmd
+

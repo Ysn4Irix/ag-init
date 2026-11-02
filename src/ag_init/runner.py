@@ -286,3 +286,37 @@ def run_ag_kit(
         return True, f"ag-kit .agents initialized from offline template ({copied} files, upstream fallback: {reason})"
 
     return False, stderr or stdout or "ag-kit init failed with non-zero exit code"
+
+
+def run_ag_kit_update(
+    target_dir: Path,
+    force: bool = True,
+    strategy: str = "merge",
+    timeout: int = 35,
+) -> Tuple[bool, str]:
+    """Execute `ag-kit update` with quiet flags, preserving local changes and falling back if offline."""
+    has_global = shutil.which("ag-kit") is not None
+
+    # Always pass --force, --quiet, and --no-backup to prevent prompts and backup clutter
+    args = ["update", "--force", "--quiet", "--no-backup", "-p", str(target_dir.resolve()), "--strategy", strategy]
+
+    if has_global:
+        cmd = ["ag-kit"] + args
+    else:
+        cmd = ["npx", "--yes", "@vudovn/ag-kit"] + args
+
+    ret_code, stdout, stderr = run_command(cmd, cwd=target_dir, timeout=timeout)
+    if ret_code == 0:
+        return True, stdout.strip() or "ag-kit .agents updated successfully"
+
+    # Fallback to copy any missing bundled agents if upstream failed or offline
+    copied = copy_bundled_agents(target_dir)
+    if copied > 0:
+        reason = (stderr or stdout or "network timeout").strip()[:80]
+        return True, f"ag-kit .agents updated from bundled template ({copied} files, upstream fallback: {reason})"
+
+    if (target_dir / ".agents").is_dir():
+        return True, "ag-kit .agents preserved locally"
+
+    return False, stderr or stdout or "ag-kit update failed with non-zero exit code"
+

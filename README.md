@@ -82,6 +82,19 @@ Options:
   --dry-run                     Preview operations without writing files [default: false]
 ```
 
+## Updating Workspaces & CLI
+
+```bash
+# Safely update existing workspace (.agents tree, antislop skills, and AGENTS.md rules)
+ag-init update
+
+# Preview workspace update without writing changes
+ag-init update --dry-run
+
+# Upgrade the global ag-init tool itself
+ag-init update --self
+```
+
 ## Managing Rules
 
 ```bash

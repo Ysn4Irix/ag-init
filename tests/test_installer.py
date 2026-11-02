@@ -6,10 +6,12 @@ from ag_init.cli import app
 from ag_init.installer import (
     build_install_command,
     build_uninstall_command,
+    build_update_command,
     detect_available_backends,
     install_ag_init,
     resolve_install_source,
     uninstall_ag_init,
+    update_ag_init,
     verify_cli_path,
 )
 
@@ -125,3 +127,43 @@ def test_cli_uninstall_command_dry_run():
     assert result.exit_code == 0
     assert "Uninstalling ag-init" in result.stdout
     assert "Command:" in result.stdout
+
+
+def test_build_update_command():
+    assert build_update_command("uv") == ["uv", "tool", "upgrade", "ag-init"]
+    assert build_update_command("uv", source="git+https://github.com/org/repo.git") == [
+        "uv",
+        "tool",
+        "install",
+        "--force",
+        "git+https://github.com/org/repo.git",
+    ]
+    assert build_update_command("pipx") == ["pipx", "upgrade", "ag-init"]
+    assert build_update_command("pip") == ["pip", "install", "--user", "--upgrade", "ag-init"]
+
+
+def test_update_ag_init_dry_run(monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda cmd: "/bin/" + cmd if cmd == "uv" else None)
+    success, output, cmd = update_ag_init(dry_run=True)
+    assert success is True
+    assert "uv tool upgrade ag-init" in " ".join(cmd)
+    assert "Would execute" in output
+
+
+def test_update_ag_init_execution_mocked(mocker):
+    mocker.patch("ag_init.installer.detect_available_backends", return_value=["uv"])
+    mocker.patch("ag_init.installer.run_command", return_value=(0, "Upgraded ag-init to v0.1.3", ""))
+
+    success, output, cmd = update_ag_init()
+    assert success is True
+    assert "Upgraded ag-init" in output
+    assert "uv tool upgrade ag-init" in " ".join(cmd)
+
+
+def test_cli_update_self_dry_run():
+    result = runner.invoke(app, ["update", "--self", "--dry-run"])
+    assert result.exit_code == 0
+    assert "Updating ag-init globally..." in result.stdout
+    assert "Command:" in result.stdout
+    assert "ag-init updated successfully." in result.stdout
+

@@ -30,12 +30,16 @@ from ag_init.rules_merger import (
 )
 from ag_init.runner import (
     check_prerequisites,
+    copy_bundled_agents,
+    copy_bundled_skills,
     run_ag_kit,
+    run_ag_kit_update,
     run_antislop,
 )
 from ag_init.installer import (
     install_ag_init,
     uninstall_ag_init,
+    update_ag_init,
 )
 
 if sys.platform == "win32":
@@ -523,3 +527,197 @@ def uninstall_cmd(
     if output and not dry_run:
         console.print(output, markup=False)
     console.print("[bold green][+] ag-init uninstalled successfully.[/bold green]")
+
+
+@app.command("update")
+def update_cmd(
+    path: Path = typer.Option(
+        Path("."),
+        "--path",
+        "-p",
+        help="Target project directory to update",
+        file_okay=False,
+        dir_okay=True,
+    ),
+    strategy: str = typer.Option(
+        "merge",
+        "--strategy",
+        help="Update strategy for .agents: 'merge' preserves local changes, 'replace' restores upstream",
+    ),
+    skip_upstream: bool = typer.Option(
+        False,
+        "--skip-upstream",
+        help="Skip running npm/ag-kit upstream updates",
+    ),
+    rules_dir: Optional[Path] = typer.Option(
+        None,
+        "--rules-dir",
+        help="Custom directory containing markdown rule snippets",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+    ),
+    self_update: bool = typer.Option(
+        False,
+        "--self",
+        help="Upgrade the global ag-init CLI package itself instead of workspace",
+    ),
+    backend: Optional[str] = typer.Option(
+        None,
+        "--backend",
+        "-b",
+        help="Tool installer backend ('uv', 'pipx', 'pip') when updating with --self",
+    ),
+    git: Optional[str] = typer.Option(
+        None,
+        "--git",
+        help="Custom git repository URL when updating with --self",
+    ),
+    force: bool = typer.Option(
+        True,
+        "--force",
+        "-f",
+        help="Non-interactive execution, skip confirmations",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview update actions without writing files or mutating state",
+    ),
+):
+    """Update workspace agents, skills, and rules, or upgrade ag-init itself with --self."""
+    if self_update:
+        console.print("[bold cyan]Updating ag-init globally...[/bold cyan]")
+        success, output, cmd = update_ag_init(
+            source_path=path if path != Path(".") else None,
+            git_url=git,
+            backend=backend,
+            dry_run=dry_run,
+        )
+        if not success:
+            console.print(f"[bold red]Update failed:[/bold red] {output}")
+            raise typer.Exit(code=1)
+
+        console.print(f"  [green][+][/green] Command: [dim]{' '.join(cmd)}[/dim]")
+        if output and not dry_run:
+            console.print(output, markup=False)
+        console.print("[bold green][+] ag-init updated successfully.[/bold green]")
+        return
+
+    target_dir = path.resolve()
+    console.print(
+        Panel(
+            f"[bold cyan]Antigravity Workspace Updater[/bold cyan] [dim]v{__version__}[/dim]\n"
+            f"[dim]Target: {target_dir}[/dim]"
+            + (" [bold red](DRY RUN)[/bold red]" if dry_run else ""),
+            border_style="cyan",
+        )
+    )
+
+    # 1. Update antislop-ai skills in .agents/skills/
+    antislop_status = "Skipped"
+    if not skip_upstream:
+        if not dry_run:
+            antislop_ok, antislop_msg = run_antislop(target_dir, force=force)
+            antislop_status = "Updated" if antislop_ok else "Fallback"
+            console.print(f"  [{'green' if antislop_ok else 'yellow'}][+] antislop-ai: {antislop_msg}[/]")
+        else:
+            console.print("  [dim][dry-run][/dim] Would update: [cyan]antislop-ai skills in .agents/skills/[/cyan]")
+            antislop_status = "Would Update"
+    else:
+        if not dry_run:
+            copied = copy_bundled_skills(target_dir)
+            antislop_status = f"Bundled ({copied} skills)"
+        else:
+            antislop_status = "Would Copy Bundled"
+
+    # 2. Update ag-kit .agents tree
+    ag_kit_status = "Skipped"
+    if not skip_upstream:
+        if not dry_run:
+            ag_ok, ag_msg = run_ag_kit_update(target_dir, force=force, strategy=strategy)
+            ag_kit_status = "Updated" if ag_ok else "Preserved"
+            console.print(f"  [{'green' if ag_ok else 'yellow'}][+] ag-kit: {ag_msg}[/]")
+        else:
+            console.print(
+                f"  [dim][dry-run][/dim] Would execute: [cyan]ag-kit update -f -q --no-backup -p {target_dir} --strategy {strategy}[/cyan]"
+            )
+            ag_kit_status = "Would Update"
+    else:
+        if not dry_run:
+            copied = copy_bundled_agents(target_dir)
+            ag_kit_status = f"Bundled ({copied} files)"
+        else:
+            ag_kit_status = "Would Copy Bundled"
+
+    # 3. Discover and Sync Rules in AGENTS.md
+    registry = RuleRegistry(project_dir=target_dir, custom_rules_dir=rules_dir)
+    all_rules = registry.list_rules()
+    agents_md = target_dir / "AGENTS.md"
+
+    rules_synced = []
+    rules_added = []
+    if agents_md.exists():
+        text = agents_md.read_text(encoding="utf-8")
+        tag_pattern = re.compile(r"<!-- ag-init:rule:([a-zA-Z0-9_-]+):start -->")
+        installed_ids = set(tag_pattern.findall(text))
+
+        rules_to_merge = []
+        for r in all_rules:
+            if r.id in installed_ids or r.default:
+                rules_to_merge.append(r)
+
+        merge_res = merge_rules_into_agents_md(
+            agents_md,
+            rules_to_merge,
+            context={"language_in": "english", "language_out": "english"},
+            create_backup=True,
+            dry_run=dry_run,
+        )
+        rules_synced = merge_res.rules_updated
+        rules_added = merge_res.rules_added
+
+        if rules_synced:
+            console.print(f"  [cyan][+] Synced existing rules in AGENTS.md:[/cyan] {', '.join(rules_synced)}")
+        if rules_added:
+            console.print(f"  [green][+] Added missing default rules to AGENTS.md:[/green] {', '.join(rules_added)}")
+    else:
+        default_rules = [r for r in all_rules if r.default]
+        merge_res = merge_rules_into_agents_md(
+            agents_md,
+            default_rules,
+            context={"language_in": "english", "language_out": "english"},
+            create_backup=True,
+            dry_run=dry_run,
+        )
+        rules_added = merge_res.rules_added
+        if rules_added:
+            console.print(f"  [green][+] Initialized AGENTS.md with rules:[/green] {', '.join(rules_added)}")
+
+    # 4. Workspace Hygiene & Cleanup
+    git_modified, added_git = setup_gitignore(target_dir, dry_run=dry_run)
+    if git_modified:
+        console.print(f"  [green][+] Updated .gitignore:[/green] {', '.join(added_git)}")
+
+    setup_docs_directory(target_dir, dry_run=dry_run)
+
+    removed_backups = cleanup_backup_directories(target_dir, dry_run=dry_run)
+    if removed_backups:
+        console.print(f"  [dim][+] Cleaned up backup folders: {', '.join(removed_backups)}[/dim]")
+
+    # 5. Summary Table
+    table = Table(title="Workspace Update Summary", border_style="dim")
+    table.add_column("Component", style="bold")
+    table.add_column("Status", style="green")
+    table.add_column("Details")
+
+    table.add_row("antislop-ai", antislop_status, "Skills in .agents/skills/")
+    table.add_row("ag-kit", ag_kit_status, f"Managed .agents tree (strategy: {strategy})")
+    rules_detail = f"{len(rules_synced)} synced, {len(rules_added)} added"
+    table.add_row("AGENTS.md", "Up to date", rules_detail)
+    table.add_row("Hygiene", "Clean", ".gitignore protected, backup folders pruned")
+
+    console.print()
+    console.print(table)
+    console.print("\n[bold green][+] Project workspace update complete![/bold green]\n")
+

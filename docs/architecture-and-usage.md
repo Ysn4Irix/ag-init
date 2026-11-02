@@ -77,6 +77,12 @@ ag-init install --backend pipx
 # Dry run preview of installation commands
 ag-init install --dry-run
 
+# Update workspace (.agents tree, antislop skills, AGENTS.md rules)
+ag-init update
+
+# Upgrade global ag-init tool itself
+ag-init update --self
+
 # Uninstall
 ag-init uninstall
 ```
