@@ -64,6 +64,46 @@ app.add_typer(rules_app, name="rules")
 
 console = Console(legacy_windows=False)
 
+KNOWN_PACKAGES = {"antislop-ai", "ag-kit"}
+
+
+def normalize_package_name(name: str) -> Optional[str]:
+    """Normalize user-supplied package identifier to canonical name."""
+    cleaned = name.strip().lower().replace("_", "-")
+    if cleaned in ("antislop", "antislop-ai", "anti-slop"):
+        return "antislop-ai"
+    if cleaned in ("ag-kit", "agkit"):
+        return "ag-kit"
+    return cleaned
+
+
+def parse_excluded_packages(
+    exclude_packages: Optional[List[str]] = None,
+    no_antislop: bool = False,
+    no_ag_kit: bool = False,
+) -> set[str]:
+    """Resolve and validate set of packages to exclude from installation/update."""
+    excluded: set[str] = set()
+    if no_antislop:
+        excluded.add("antislop-ai")
+    if no_ag_kit:
+        excluded.add("ag-kit")
+
+    if exclude_packages:
+        for item in exclude_packages:
+            for part in item.split(","):
+                part = part.strip()
+                if not part:
+                    continue
+                norm = normalize_package_name(part)
+                if norm in KNOWN_PACKAGES:
+                    excluded.add(norm)
+                else:
+                    console.print(
+                        f"[yellow]⚠️  Warning: Unknown package '{part}' in --exclude. Known packages: {', '.join(sorted(KNOWN_PACKAGES))}[/yellow]"
+                    )
+    return excluded
+
 
 def version_callback(value: bool):
     if value:
@@ -120,6 +160,24 @@ def main(
         "--skip-upstream",
         help="Skip running npx antislop-ai and ag-kit init",
     ),
+    exclude_package: Optional[List[str]] = typer.Option(
+        None,
+        "--exclude",
+        "--exclude-package",
+        help="Exclude package from installation: 'antislop-ai', 'ag-kit' (can be specified multiple times or comma-separated)",
+    ),
+    no_antislop: bool = typer.Option(
+        False,
+        "--no-antislop",
+        "--skip-antislop",
+        help="Exclude antislop-ai skills installation",
+    ),
+    no_ag_kit: bool = typer.Option(
+        False,
+        "--no-ag-kit",
+        "--skip-ag-kit",
+        help="Exclude ag-kit managed .agents tree installation",
+    ),
     git_init: bool = typer.Option(
         False,
         "--git-init",
@@ -162,14 +220,27 @@ def main(
     if not dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
+    excluded_pkgs = parse_excluded_packages(
+        exclude_packages=exclude_package,
+        no_antislop=no_antislop,
+        no_ag_kit=no_ag_kit,
+    )
+
     # 1. Prerequisite verification
     prereqs = check_prerequisites()
     for warning in prereqs.warnings:
+        if "ag-kit" in warning and "ag-kit" in excluded_pkgs:
+            continue
         console.print(f"[yellow]⚠️  {warning}[/yellow]")
 
     # 2. Run Upstream tools (antislop-ai & ag-kit)
-    if not skip_upstream:
-        # Step A: antislop-ai (installed non-interactively via npm unpack or bundled templates)
+    # Step A: antislop-ai (installed non-interactively via npm unpack or bundled templates)
+    if "antislop-ai" in excluded_pkgs:
+        if dry_run:
+            console.print("  [dim][dry-run][/dim] Skipped: antislop-ai skills (excluded)")
+        else:
+            console.print("  [dim][>] Skipping antislop-ai installation (excluded via flag)[/dim]")
+    elif not skip_upstream:
         if not dry_run:
             with console.status("[bold green]Installing antislop-ai skills...[/bold green]"):
                 ok, msg = run_antislop(target_dir)
@@ -180,7 +251,13 @@ def main(
         else:
             console.print("  [dim][dry-run][/dim] Would install: [cyan]antislop-ai skills into .agents/skills/[/cyan]")
 
-        # Step B: ag-kit init
+    # Step B: ag-kit init
+    if "ag-kit" in excluded_pkgs:
+        if dry_run:
+            console.print("  [dim][dry-run][/dim] Skipped: ag-kit initialization (excluded)")
+        else:
+            console.print("  [dim][>] Skipping ag-kit initialization (excluded via flag)[/dim]")
+    elif not skip_upstream:
         if not dry_run:
             if prereqs.node_available and prereqs.npx_available:
                 with console.status("[bold green]Executing ag-kit init...[/bold green]"):
@@ -560,6 +637,24 @@ def update_cmd(
         "--skip-upstream",
         help="Skip running npm/ag-kit upstream updates",
     ),
+    exclude_package: Optional[List[str]] = typer.Option(
+        None,
+        "--exclude",
+        "--exclude-package",
+        help="Exclude package from update: 'antislop-ai', 'ag-kit' (can be specified multiple times or comma-separated)",
+    ),
+    no_antislop: bool = typer.Option(
+        False,
+        "--no-antislop",
+        "--skip-antislop",
+        help="Exclude antislop-ai skills from update",
+    ),
+    no_ag_kit: bool = typer.Option(
+        False,
+        "--no-ag-kit",
+        "--skip-ag-kit",
+        help="Exclude ag-kit managed .agents tree from update",
+    ),
     rules_dir: Optional[Path] = typer.Option(
         None,
         "--rules-dir",
@@ -625,9 +720,21 @@ def update_cmd(
         )
     )
 
+    excluded_pkgs = parse_excluded_packages(
+        exclude_packages=exclude_package,
+        no_antislop=no_antislop,
+        no_ag_kit=no_ag_kit,
+    )
+
     # 1. Update antislop-ai skills in .agents/skills/
     antislop_status = "Skipped"
-    if not skip_upstream:
+    if "antislop-ai" in excluded_pkgs:
+        antislop_status = "Excluded"
+        if dry_run:
+            console.print("  [dim][dry-run][/dim] Skipped: antislop-ai skills (excluded)")
+        else:
+            console.print("  [dim][>] antislop-ai: Excluded from update[/dim]")
+    elif not skip_upstream:
         if not dry_run:
             antislop_ok, antislop_msg = run_antislop(target_dir, force=force)
             antislop_status = "Updated" if antislop_ok else "Fallback"
@@ -644,7 +751,13 @@ def update_cmd(
 
     # 2. Update ag-kit .agents tree
     ag_kit_status = "Skipped"
-    if not skip_upstream:
+    if "ag-kit" in excluded_pkgs:
+        ag_kit_status = "Excluded"
+        if dry_run:
+            console.print("  [dim][dry-run][/dim] Skipped: ag-kit initialization (excluded)")
+        else:
+            console.print("  [dim][>] ag-kit: Excluded from update[/dim]")
+    elif not skip_upstream:
         if not dry_run:
             ag_ok, ag_msg = run_ag_kit_update(target_dir, force=force, strategy=strategy)
             ag_kit_status = "Updated" if ag_ok else "Preserved"
@@ -722,8 +835,10 @@ def update_cmd(
     table.add_column("Status", style="green")
     table.add_column("Details")
 
-    table.add_row("antislop-ai", antislop_status, "Skills in .agents/skills/")
-    table.add_row("ag-kit", ag_kit_status, f"Managed .agents tree (strategy: {strategy})")
+    antislop_detail = "Package excluded via CLI flag" if antislop_status == "Excluded" else "Skills in .agents/skills/"
+    ag_kit_detail = "Package excluded via CLI flag" if ag_kit_status == "Excluded" else f"Managed .agents tree (strategy: {strategy})"
+    table.add_row("antislop-ai", antislop_status, antislop_detail)
+    table.add_row("ag-kit", ag_kit_status, ag_kit_detail)
     rules_detail = f"{len(rules_synced)} synced, {len(rules_added)} added"
     table.add_row("AGENTS.md", "Up to date", rules_detail)
     table.add_row("Hygiene", "Clean", ".gitignore protected, backup folders pruned")

@@ -80,11 +80,31 @@ ag-init install --dry-run
 # Update workspace (.agents tree, antislop skills, AGENTS.md rules)
 ag-init update
 
+# Exclude packages from update
+ag-init update --exclude antislop-ai
+ag-init update --no-ag-kit
+
 # Upgrade global ag-init tool itself
 ag-init update --self
 
 # Uninstall
 ag-init uninstall
+```
+
+### Excluding Packages on Initialization
+```bash
+# Exclude antislop-ai skills installation
+ag-init --exclude antislop-ai
+# or
+ag-init --no-antislop
+
+# Exclude ag-kit .agents initialization
+ag-init --exclude ag-kit
+# or
+ag-init --no-ag-kit
+
+# Exclude both (initialize only AGENTS.md rules, docs, and git hygiene)
+ag-init --exclude antislop-ai,ag-kit
 ```
 
 ### PATH Verification & Shell Guidance

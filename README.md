@@ -78,8 +78,31 @@ Options:
   --language-out TEXT           Output language directive [default: english]
   --badges / --no-badges        Allow or prohibit decorative badges [default: no-badges]
   --rules-dir PATH              Custom rules directory to include
+  --exclude, --exclude-package  Exclude package: 'antislop-ai', 'ag-kit' (repeatable or comma-separated)
+  --no-antislop                 Exclude antislop-ai skills from installation
+  --no-ag-kit                   Exclude ag-kit managed .agents tree from installation
+  --skip-upstream               Skip running upstream npm/npx tools
   --force / -f                  Non-interactive execution, skip prompts [default: false]
   --dry-run                     Preview operations without writing files [default: false]
+```
+
+### Excluding Specific Packages
+
+If you only want Antigravity rules or only specific components, you can exclude individual packages during initialization or update:
+
+```bash
+# Initialize workspace without antislop-ai skills:
+uvx ag-init --exclude antislop-ai
+# or with shortcut flag:
+uvx ag-init --no-antislop
+
+# Initialize workspace without ag-kit (.agents directory):
+uvx ag-init --exclude ag-kit
+# or with shortcut flag:
+uvx ag-init --no-ag-kit
+
+# Exclude both (initialize only AGENTS.md rules, docs, and git hygiene):
+uvx ag-init --exclude antislop-ai,ag-kit
 ```
 
 ## Updating Workspaces & CLI
