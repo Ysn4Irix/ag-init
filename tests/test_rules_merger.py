@@ -9,13 +9,18 @@ def test_rule_registry_builtins():
     rules = registry.list_rules()
     ids = {r.id for r in rules}
     assert "language" in ids
-    assert "no-badges" in ids
+    assert "engineering-standards" in ids
     assert "github-cicd" in ids
 
     lang_rule = registry.get_rule("language")
     assert lang_rule is not None
     assert lang_rule.category == "general"
     assert "INPUT_LANGUAGE" in lang_rule.content
+
+    eng_rule = registry.get_rule("engineering-standards")
+    assert eng_rule is not None
+    assert eng_rule.category == "engineering"
+    assert "Core Principles" in eng_rule.content
 
 
 def test_custom_rule_loading(tmp_path: Path):
@@ -48,7 +53,7 @@ def test_merge_rules_into_blank_file(tmp_path: Path):
     registry = RuleRegistry()
     rules = [
         registry.get_rule("language"),
-        registry.get_rule("no-badges"),
+        registry.get_rule("engineering-standards"),
     ]
 
     res = merge_rules_into_agents_md(
@@ -61,7 +66,7 @@ def test_merge_rules_into_blank_file(tmp_path: Path):
     content = agents_md.read_text(encoding="utf-8")
     assert "<!-- ag-init:rule:language:start -->" in content
     assert "INPUT_LANGUAGE is french" in content
-    assert "<!-- ag-init:rule:no-badges:start -->" in content
+    assert "<!-- ag-init:rule:engineering-standards:start -->" in content
 
 
 def test_merge_rules_idempotent(tmp_path: Path):
@@ -103,21 +108,68 @@ Never touch this custom developer section!
     )
 
     registry = RuleRegistry()
-    rules = [registry.get_rule("language"), registry.get_rule("no-badges")]
+    rules = [registry.get_rule("language"), registry.get_rule("engineering-standards")]
 
     res = merge_rules_into_agents_md(agents_md, rules, context={"language_in": "english", "language_out": "english"})
     assert "language" in res.rules_updated
-    assert "no-badges" in res.rules_updated
+    assert "engineering-standards" in res.rules_updated
 
     content = agents_md.read_text(encoding="utf-8")
     # Verify antislop untouched
     assert "<!-- antislop:start -->" in content
     # Verify tags added
     assert "<!-- ag-init:rule:language:start -->" in content
-    assert "<!-- ag-init:rule:no-badges:start -->" in content
+    assert "<!-- ag-init:rule:engineering-standards:start -->" in content
     # Verify custom section preserved
     assert "## Custom Section" in content
     assert "Never touch this custom developer section!" in content
     # Verify backup was created
     assert res.backup_path is not None
     assert res.backup_path.exists()
+
+
+def test_rule_registry_project_scoped(tmp_path: Path):
+    proj_dir = tmp_path / "my_project"
+    proj_rules = proj_dir / ".ag-init" / "rules"
+    proj_rules.mkdir(parents=True)
+    (proj_rules / "project_custom.md").write_text(
+        """---
+id: project-custom
+name: Project Custom Rule
+category: project
+default: true
+---
+## Project Specific Rule
+Strict project scoped instructions.
+""",
+        encoding="utf-8",
+    )
+
+    registry = RuleRegistry(project_dir=proj_dir)
+    assert "project-custom" in registry.rules
+    rule = registry.get_rule("project-custom")
+    assert rule is not None
+    assert rule.source == "project"
+
+
+def test_rule_registry_excludes_global_user_profile(tmp_path: Path, monkeypatch):
+    fake_appdata = tmp_path / "fake_appdata"
+    fake_global = fake_appdata / "ag-init" / "rules"
+    fake_global.mkdir(parents=True)
+    (fake_global / "leaked_global.md").write_text(
+        """---
+id: leaked-global
+name: Leaked Global Rule
+category: global
+default: true
+---
+Global text that must NOT be loaded.
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("APPDATA", str(fake_appdata))
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    registry = RuleRegistry()
+    assert "leaked-global" not in registry.rules
+

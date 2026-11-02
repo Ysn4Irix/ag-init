@@ -34,27 +34,34 @@ class MergeResult:
 
 
 class RuleRegistry:
-    """Discovers rules across built-in, global user config, and custom paths."""
+    """Discovers rules across built-in, project-scoped, and custom paths (excluding global user profile)."""
 
-    def __init__(self, custom_rules_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        project_dir: Optional[Path] = None,
+        custom_rules_dir: Optional[Path] = None,
+    ):
+        self.project_dir = project_dir
         self.custom_rules_dir = custom_rules_dir
         self.rules: Dict[str, Rule] = {}
         self.reload()
 
     def reload(self) -> None:
-        """Scan all tiers and reload the registry."""
+        """Scan project-scoped tiers and reload the registry (global profile excluded)."""
         self.rules.clear()
         # 1. Built-in package rules
         builtin_dir = Path(__file__).parent / "templates" / "rules"
         if builtin_dir.is_dir():
             self._scan_directory(builtin_dir, source="builtin")
 
-        # 2. Global user rules (~/.config/ag-init/rules or %APPDATA%/ag-init/rules)
-        global_dir = self.ensure_global_rules_dir()
-        if global_dir.is_dir():
-            self._scan_directory(global_dir, source="global")
+        # 2. Project-scoped rules (<project_dir>/.ag-init/rules or <project_dir>/rules)
+        if self.project_dir and self.project_dir.is_dir():
+            for sub_name in (".ag-init/rules", "rules"):
+                candidate = self.project_dir / sub_name
+                if candidate.is_dir():
+                    self._scan_directory(candidate, source="project")
 
-        # 3. Custom rules dir from CLI
+        # 3. Custom rules dir from CLI (--rules-dir)
         if self.custom_rules_dir and self.custom_rules_dir.is_dir():
             self._scan_directory(self.custom_rules_dir, source="custom")
 
@@ -99,6 +106,9 @@ class RuleRegistry:
             if len(parts) >= 3:
                 raw_meta = parts[1].strip()
                 content = parts[2].strip()
+                # Defensive cleanup: strip rule delimiters if accidentally present
+                content = re.sub(r"^<!-- ag-init:rule:[^:]+:start -->\s*", "", content, flags=re.MULTILINE)
+                content = re.sub(r"\s*<!-- ag-init:rule:[^:]+:end -->$", "", content, flags=re.MULTILINE).strip()
                 meta = yaml.safe_load(raw_meta) or {}
                 return Rule(
                     id=str(meta.get("id", stem_id)),
@@ -111,13 +121,16 @@ class RuleRegistry:
                 )
 
         # Fallback if no frontmatter
+        content = text.strip()
+        content = re.sub(r"^<!-- ag-init:rule:[^:]+:start -->\s*", "", content, flags=re.MULTILINE)
+        content = re.sub(r"\s*<!-- ag-init:rule:[^:]+:end -->$", "", content, flags=re.MULTILINE).strip()
         return Rule(
             id=stem_id,
             name=stem_id.title(),
             category="custom",
             default=True,
             description="",
-            content=text.strip(),
+            content=content,
             source=default_source,
         )
 
@@ -164,16 +177,30 @@ def merge_rules_into_agents_md(
             re.compile(r"(?:\r?\n)?INPUT_LANGUAGE is [^\r\n]+\r?\nOUTPUT_LANGUAGE is [^\r\n]+", re.MULTILINE),
         ),
         (
-            "no-badges",
-            re.compile(r"(?:\r?\n)?## UI Rule: Prohibit Decorative Badges and Pills.*?(?=\r?\n## |\Z)", re.DOTALL),
+            "engineering-standards",
+            re.compile(
+                r"(?:\r?\n)?(?:<!-- ag-init:rule:no-badges:start -->.*?<!-- ag-init:rule:no-badges:end -->|## UI Rule: Prohibit Decorative Badges and Pills.*?(?=\r?\n## |\Z))",
+                re.DOTALL,
+            ),
         ),
         (
             "github-cicd",
-            re.compile(r"(?:\r?\n)?## GitHub CI/CD & Releases.*?(?=\r?\n## |\Z)", re.DOTALL),
+            re.compile(r"(?:\r?\n)?## GitHub CI/CD (?:& Releases|& Release Management).*?(?=\r?\n## |\Z)", re.DOTALL),
         ),
     ]
 
+    # Clean up obsolete no-badges tag if engineering-standards is being installed
+    if any(getattr(r, "id", None) == "engineering-standards" for r in rules if r):
+        working_content = re.sub(
+            r"(?:\r?\n)?<!-- ag-init:rule:no-badges:start -->.*?<!-- ag-init:rule:no-badges:end -->",
+            "",
+            working_content,
+            flags=re.DOTALL,
+        )
+
     for rule in rules:
+        if not rule or not getattr(rule, "id", None):
+            continue
         start_tag, end_tag = get_rule_delimiters(rule.id)
         # Render placeholders like {language_in}, {language_out}
         try:

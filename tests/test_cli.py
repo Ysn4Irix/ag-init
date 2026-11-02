@@ -29,7 +29,7 @@ def test_cli_rules_list():
     result = runner.invoke(app, ["rules", "list"])
     assert result.exit_code == 0
     assert "Available Workspace Rules" in result.stdout
-    assert "no-badges" in result.stdout
+    assert "engineering-standards" in result.stdout
     assert "language" in result.stdout
     assert "github-cicd" in result.stdout
 
@@ -78,7 +78,7 @@ def test_cli_init_full(tmp_path: Path, mocker):
     assert agents_md.exists()
     content = agents_md.read_text(encoding="utf-8")
     assert "<!-- ag-init:rule:language:start -->" in content
-    assert "<!-- ag-init:rule:no-badges:start -->" in content
+    assert "<!-- ag-init:rule:engineering-standards:start -->" in content
     assert "<!-- ag-init:rule:github-cicd:start -->" in content
 
     # Verify .gitignore

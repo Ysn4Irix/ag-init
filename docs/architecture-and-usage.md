@@ -101,8 +101,8 @@ uvx ag-init rules add <rule-id>
 uvx ag-init rules sync
 ```
 
-### Adding New Rules (Zero Code Changes)
-To introduce a new rule for your machine or team, place a `.md` file in `%APPDATA%\ag-init\rules\` (Windows) or `~/.config/ag-init/rules/` (Unix):
+### Adding Project-Scoped Rules (Zero Code Changes)
+Rules are strictly project-scoped to ensure predictability across environments. To introduce a custom rule for a project, place a `.md` file in `.ag-init/rules/` inside your target repository (or pass `--rules-dir <path>`):
 
 ```markdown
 ---
@@ -116,4 +116,4 @@ description: Enforces explicit migration checks before touching models
 Always create timestamped migrations when altering database schemas...
 ```
 
-The CLI will automatically discover this rule on your next run.
+The CLI will automatically discover project-scoped rules during initialization and rule sync.

@@ -6,7 +6,7 @@
 
 ## Architecture Decisions Confirmed
 - **Execution Model**: Python subprocess orchestrator executing `npx antislop-ai` and `ag-kit init -f`, with graceful degradation if Node/npx is missing.
-- **Rule Strategy**: 3-tier modular rule discovery (`templates/rules/*.md`, `~/.config/ag-init/rules/*.md`, CLI flags) with idempotent `<!-- ag-init:rule:<id>:start -->` delimiters.
+- **Rule Strategy**: Modular project-scoped rule discovery (`templates/rules/*.md`, `<project>/.ag-init/rules/*.md`, CLI flags) with idempotent `<!-- ag-init:rule:<id>:start -->` delimiters. Global user profile rules are excluded to ensure rules remain project-scoped.
 - **Conflict Handling**: Safe non-destructive merge with automatic `.ag-init-backup` backup creation.
 - **CLI/Packaging**: Zero-install CLI runnable via `uvx ag-init` / `pipx run ag-init` built with `typer` and `rich`.
 

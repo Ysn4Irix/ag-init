@@ -196,7 +196,7 @@ def main(
             console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f -q --strategy merge[/cyan]")
 
     # 3. Discover and Filter Rules
-    registry = RuleRegistry(custom_rules_dir=rules_dir)
+    registry = RuleRegistry(project_dir=target_dir, custom_rules_dir=rules_dir)
     all_rules = registry.list_rules()
 
     includes = set(include_rule or [])
@@ -301,7 +301,7 @@ def list_rules(
     ),
 ):
     """List all available rules and check if active in local AGENTS.md."""
-    registry = RuleRegistry(custom_rules_dir=rules_dir)
+    registry = RuleRegistry(project_dir=path, custom_rules_dir=rules_dir)
     rules = registry.list_rules()
 
     agents_md = (path / "AGENTS.md").resolve()
@@ -315,7 +315,7 @@ def list_rules(
                 active_in_project.add(r.id)
 
     table = Table(title="Available Workspace Rules", border_style="cyan")
-    table.add_column("ID", style="bold cyan")
+    table.add_column("ID", style="bold cyan", no_wrap=True)
     table.add_column("Name")
     table.add_column("Category", style="yellow")
     table.add_column("Source", style="dim")
@@ -346,7 +346,7 @@ def add_rule(
     ),
 ):
     """Add a specific rule to AGENTS.md without full initialization."""
-    registry = RuleRegistry(custom_rules_dir=rules_dir)
+    registry = RuleRegistry(project_dir=path, custom_rules_dir=rules_dir)
     rule = registry.get_rule(rule_id)
     if not rule:
         console.print(f"[bold red]Error:[/bold red] Rule '[yellow]{rule_id}[/yellow]' not found.")
@@ -382,7 +382,7 @@ def sync_rules(
         console.print(f"[bold red]Error:[/bold red] {agents_md} does not exist.")
         raise typer.Exit(code=1)
 
-    registry = RuleRegistry(custom_rules_dir=rules_dir)
+    registry = RuleRegistry(project_dir=path, custom_rules_dir=rules_dir)
     text = agents_md.read_text(encoding="utf-8")
 
     # Find all tagged rule IDs
