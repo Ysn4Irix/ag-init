@@ -81,9 +81,22 @@ Options:
   --exclude, --exclude-package  Exclude package: 'antislop-ai', 'ag-kit' (repeatable or comma-separated)
   --no-antislop                 Exclude antislop-ai skills from installation
   --no-ag-kit                   Exclude ag-kit managed .agents tree from installation
+  --codex                       Configure workspace for Codex CLI (.codex/ and AGENTS.md)
   --skip-upstream               Skip running upstream npm/npx tools
   --force / -f                  Non-interactive execution, skip prompts [default: false]
   --dry-run                     Preview operations without writing files [default: false]
+```
+
+### Codex CLI Mode (`--codex`)
+
+Configure a project specifically for **OpenAI Codex CLI** (using `.codex/` + `AGENTS.md` instead of `.agents/`):
+
+```bash
+# Initialize project for Codex CLI (.codex/skills/, .codex/agents/, .codex/rules/, AGENTS.md)
+uvx ag-init --codex
+
+# Update existing Codex CLI workspace
+ag-init update --codex
 ```
 
 ### Excluding Specific Packages

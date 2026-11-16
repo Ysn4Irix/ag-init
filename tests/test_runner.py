@@ -241,3 +241,93 @@ def test_run_ag_kit_update_fallback_bundled(tmp_path: Path, mocker):
     assert success is True
     assert (tmp_path / ".agents").is_dir()
 
+
+def test_run_antislop_custom_skills_dir_codex(tmp_path: Path):
+    codex_skills = tmp_path / ".codex" / "skills"
+    success, msg = run_antislop(tmp_path, prefer_bundled=True, skills_dir=codex_skills)
+    assert success is True
+    assert "bundled templates (6 skills)" in msg
+    assert (codex_skills / "antislop" / "SKILL.md").exists()
+    assert not (tmp_path / ".agents").exists()
+
+    agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert ".codex/skills/antislop/SKILL.md" in agents_md
+    assert ".agents/skills/" not in agents_md
+
+
+def test_project_agents_to_codex(tmp_path: Path):
+    from ag_init.runner import project_agents_to_codex
+
+    staged = tmp_path / "staged" / ".agents"
+    (staged / "agent").mkdir(parents=True)
+    (staged / "rules").mkdir(parents=True)
+    (staged / "skills" / "clean-code").mkdir(parents=True)
+    (staged / "agent" / "orchestrator.md").write_text("Read .agents/memory/MEMORY.md", encoding="utf-8")
+    (staged / "rules" / "core-protocol.md").write_text("Rules live in .agents/rules/", encoding="utf-8")
+    (staged / "skills" / "clean-code" / "SKILL.md").write_text("Skill instructions", encoding="utf-8")
+    (staged / "antigravity.json").write_text("{}", encoding="utf-8")
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    copied = project_agents_to_codex(staged, project_dir, strategy="merge")
+
+    assert copied == 3
+    assert (project_dir / ".codex" / "agents" / "orchestrator.md").exists()
+    assert ".codex/memory/MEMORY.md" in (project_dir / ".codex" / "agents" / "orchestrator.md").read_text(encoding="utf-8")
+    assert ".codex/rules/" in (project_dir / ".codex" / "rules" / "core-protocol.md").read_text(encoding="utf-8")
+    assert (project_dir / ".codex" / "skills" / "clean-code" / "SKILL.md").exists()
+    assert not (project_dir / ".codex" / "antigravity.json").exists()
+
+    # Merge preserves user edits while replace overwrites
+    (project_dir / ".codex" / "rules" / "core-protocol.md").write_text("USER CUSTOM", encoding="utf-8")
+    assert project_agents_to_codex(staged, project_dir, strategy="merge") == 0
+    assert (project_dir / ".codex" / "rules" / "core-protocol.md").read_text(encoding="utf-8") == "USER CUSTOM"
+
+    assert project_agents_to_codex(staged, project_dir, strategy="replace") == 3
+    assert ".codex/rules/" in (project_dir / ".codex" / "rules" / "core-protocol.md").read_text(encoding="utf-8")
+
+
+def test_run_ag_kit_codex_mode(tmp_path: Path, mocker):
+    from ag_init.runner import AG_KIT_CODEX_END, AG_KIT_CODEX_START
+
+    mocker.patch("shutil.which", return_value=None)
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=1,
+        stdout="",
+        stderr="offline",
+    )
+
+    success, msg = run_ag_kit(tmp_path, force=True, codex=True)
+    assert success is True
+    assert ".codex" in msg
+    assert (tmp_path / ".codex" / "rules" / "core-protocol.md").is_file()
+    assert (tmp_path / ".codex" / "agents" / "orchestrator.md").is_file()
+    assert (tmp_path / ".codex" / "skills" / "clean-code" / "SKILL.md").is_file()
+    assert not (tmp_path / ".agents").exists()
+
+    agents_content = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert AG_KIT_CODEX_START in agents_content
+    assert AG_KIT_CODEX_END in agents_content
+
+
+def test_run_ag_kit_update_codex_mode(tmp_path: Path, mocker):
+    from ag_init.runner import AG_KIT_CODEX_START
+
+    mocker.patch("shutil.which", return_value=None)
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[],
+        returncode=1,
+        stdout="",
+        stderr="offline",
+    )
+
+    success, msg = run_ag_kit_update(tmp_path, force=True, strategy="merge", codex=True)
+    assert success is True
+    assert ".codex" in msg
+    assert (tmp_path / ".codex").is_dir()
+    assert not (tmp_path / ".agents").exists()
+    assert AG_KIT_CODEX_START in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+

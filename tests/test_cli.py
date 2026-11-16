@@ -329,3 +329,77 @@ def test_cli_update_exclude_both(tmp_path: Path, mocker):
     assert "ag-kit: Excluded from update" in result.stdout
 
 
+def test_cli_init_codex(tmp_path: Path, mocker):
+    mock_antislop = mocker.patch("ag_init.cli.run_antislop", return_value=(True, "OK"))
+    mock_ag_kit = mocker.patch("ag_init.cli.run_ag_kit", return_value=(True, "OK"))
+    mocker.patch(
+        "ag_init.cli.check_prerequisites",
+        return_value=mocker.Mock(
+            node_available=True,
+            npx_available=True,
+            git_available=True,
+            ag_kit_global=True,
+            warnings=[],
+        ),
+    )
+
+    target = tmp_path / "codex_project"
+    result = runner.invoke(app, ["--path", str(target), "--codex"])
+    assert result.exit_code == 0
+    assert mock_antislop.called
+    assert mock_antislop.call_args.kwargs["skills_dir"] == target.resolve() / ".codex" / "skills"
+    assert mock_ag_kit.called
+    assert mock_ag_kit.call_args.kwargs["codex"] is True
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "Codex CLI (.codex/)" in clean_stdout
+    assert ".codex/ managed via ag-kit & antislop" in clean_stdout
+
+
+def test_cli_init_codex_dry_run(tmp_path: Path):
+    target = tmp_path / "codex_dry_run"
+    result = runner.invoke(app, ["--path", str(target), "--codex", "--dry-run"])
+    assert result.exit_code == 0
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "Codex CLI (.codex/)" in clean_stdout
+    assert ".codex/skills/" in clean_stdout
+    assert "projected to .codex/" in clean_stdout
+    assert not target.exists()
+
+
+def test_cli_init_codex_with_exclude(tmp_path: Path, mocker):
+    mock_antislop = mocker.patch("ag_init.cli.run_antislop", return_value=(True, "OK"))
+    mock_ag_kit = mocker.patch("ag_init.cli.run_ag_kit", return_value=(True, "OK"))
+    mocker.patch(
+        "ag_init.cli.check_prerequisites",
+        return_value=mocker.Mock(
+            node_available=True,
+            npx_available=True,
+            git_available=True,
+            ag_kit_global=True,
+            warnings=[],
+        ),
+    )
+
+    target = tmp_path / "codex_exclude_ag_kit"
+    result = runner.invoke(app, ["--path", str(target), "--codex", "--exclude", "ag-kit"])
+    assert result.exit_code == 0
+    assert mock_antislop.called
+    assert mock_antislop.call_args.kwargs["skills_dir"] == target.resolve() / ".codex" / "skills"
+    assert not mock_ag_kit.called
+
+
+def test_cli_update_codex(tmp_path: Path, mocker):
+    mock_antislop = mocker.patch("ag_init.cli.run_antislop", return_value=(True, "Updated 6 skills"))
+    mock_ag_kit = mocker.patch("ag_init.cli.run_ag_kit_update", return_value=(True, "Updated .codex tree"))
+
+    result = runner.invoke(app, ["update", "-p", str(tmp_path), "--codex"])
+    assert result.exit_code == 0
+    assert mock_antislop.called
+    assert mock_antislop.call_args.kwargs["skills_dir"] == tmp_path.resolve() / ".codex" / "skills"
+    assert mock_ag_kit.called
+    assert mock_ag_kit.call_args.kwargs["codex"] is True
+    clean_stdout = re.sub(r"\s+", " ", result.stdout)
+    assert "Skills in .codex/skills/" in clean_stdout
+    assert "Managed .codex tree" in clean_stdout
+
+

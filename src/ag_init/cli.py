@@ -31,6 +31,7 @@ from ag_init.rules_merger import (
 from ag_init.runner import (
     check_prerequisites,
     copy_bundled_agents,
+    copy_bundled_codex,
     copy_bundled_skills,
     run_ag_kit,
     run_ag_kit_update,
@@ -178,6 +179,11 @@ def main(
         "--skip-ag-kit",
         help="Exclude ag-kit managed .agents tree installation",
     ),
+    codex: bool = typer.Option(
+        False,
+        "--codex",
+        help="Configure workspace for Codex CLI (.codex/ and AGENTS.md) using ag-kit and antislop-ai",
+    ),
     git_init: bool = typer.Option(
         False,
         "--git-init",
@@ -208,11 +214,14 @@ def main(
         return
 
     target_dir = path.resolve()
+    runtime_subdir = ".codex" if codex else ".agents"
+    skills_target = target_dir / runtime_subdir / "skills"
     dry_badge = " [bold red](DRY RUN)[/bold red]" if dry_run else ""
+    runtime_line = "\n[dim]Runtime:[/dim] [cyan]Codex CLI (.codex/)[/cyan]" if codex else ""
     console.print(
         Panel(
             f"[bold cyan]Antigravity Workspace Initializer[/bold cyan] [dim]v{__version__}[/dim]{dry_badge}\n"
-            f"[dim]Target:[/dim] [yellow]{target_dir}[/yellow]",
+            f"[dim]Target:[/dim] [yellow]{target_dir}[/yellow]{runtime_line}",
             border_style="cyan",
         )
     )
@@ -243,13 +252,16 @@ def main(
     elif not skip_upstream:
         if not dry_run:
             with console.status("[bold green]Installing antislop-ai skills...[/bold green]"):
-                ok, msg = run_antislop(target_dir)
+                if codex:
+                    ok, msg = run_antislop(target_dir, skills_dir=skills_target)
+                else:
+                    ok, msg = run_antislop(target_dir)
             if ok:
                 console.print(f"  [green][+][/green] antislop-ai: {msg}")
             else:
                 console.print(f"  [yellow][!] antislop-ai: {msg.strip()}[/yellow]")
         else:
-            console.print("  [dim][dry-run][/dim] Would install: [cyan]antislop-ai skills into .agents/skills/[/cyan]")
+            console.print(f"  [dim][dry-run][/dim] Would install: [cyan]antislop-ai skills into {runtime_subdir}/skills/[/cyan]")
 
     # Step B: ag-kit init
     if "ag-kit" in excluded_pkgs:
@@ -261,20 +273,28 @@ def main(
         if not dry_run:
             if prereqs.node_available and prereqs.npx_available:
                 with console.status("[bold green]Executing ag-kit init...[/bold green]"):
-                    ok, msg = run_ag_kit(target_dir, force=force)
+                    if codex:
+                        ok, msg = run_ag_kit(target_dir, force=force, codex=True)
+                    else:
+                        ok, msg = run_ag_kit(target_dir, force=force)
                 if ok:
                     console.print(f"  [green][+][/green] ag-kit: {msg}")
                 else:
                     console.print(f"  [yellow][!] ag-kit non-zero exit: {msg.strip()}[/yellow]")
             else:
-                from ag_init.runner import copy_bundled_agents
-                copied = copy_bundled_agents(target_dir)
+                if codex:
+                    copied = copy_bundled_codex(target_dir)
+                else:
+                    copied = copy_bundled_agents(target_dir)
                 if copied > 0:
-                    console.print(f"  [green][+][/green] ag-kit: .agents initialized from offline template ({copied} files)")
+                    console.print(f"  [green][+][/green] ag-kit: {runtime_subdir} initialized from offline template ({copied} files)")
                 else:
                     console.print("  [yellow][>] Skipping ag-kit init due to missing Node/npx environment[/yellow]")
         else:
-            console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f -q --strategy merge[/cyan]")
+            if codex:
+                console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init (projected to .codex/)[/cyan]")
+            else:
+                console.print("  [dim][dry-run][/dim] Would execute: [cyan]ag-kit init -f -q --strategy merge[/cyan]")
 
     # 3. Discover and Filter Rules
     registry = RuleRegistry(project_dir=target_dir, custom_rules_dir=rules_dir)
@@ -356,10 +376,16 @@ def main(
         "docs/ directory available",
     )
     if not skip_upstream:
+        tree_label = "Codex Tree" if codex else "Agent Tree"
+        tree_detail = (
+            f"{runtime_subdir}/ managed via ag-kit & antislop"
+            if excluded_pkgs != {"antislop-ai", "ag-kit"}
+            else "Excluded via CLI flags"
+        )
         table.add_row(
-            "Agent Tree",
-            "Installed",
-            ".agents/ managed via ag-kit & antislop",
+            tree_label,
+            "Excluded" if excluded_pkgs == {"antislop-ai", "ag-kit"} else "Installed",
+            tree_detail,
         )
 
     console.print()
@@ -655,6 +681,11 @@ def update_cmd(
         "--skip-ag-kit",
         help="Exclude ag-kit managed .agents tree from update",
     ),
+    codex: bool = typer.Option(
+        False,
+        "--codex",
+        help="Update Codex CLI workspace layout (.codex/ and AGENTS.md) using ag-kit and antislop-ai",
+    ),
     rules_dir: Optional[Path] = typer.Option(
         None,
         "--rules-dir",
@@ -711,11 +742,14 @@ def update_cmd(
         return
 
     target_dir = path.resolve()
+    runtime_subdir = ".codex" if codex else ".agents"
+    skills_target = target_dir / runtime_subdir / "skills"
     dry_badge = " [bold red](DRY RUN)[/bold red]" if dry_run else ""
+    runtime_line = "\n[dim]Runtime: Codex CLI (.codex/)[/dim]" if codex else ""
     console.print(
         Panel(
             f"[bold cyan]Antigravity Workspace Updater[/bold cyan] [dim]v{__version__}[/dim]{dry_badge}\n"
-            f"[dim]Target: {target_dir}[/dim]",
+            f"[dim]Target: {target_dir}[/dim]{runtime_line}",
             border_style="cyan",
         )
     )
@@ -726,7 +760,7 @@ def update_cmd(
         no_ag_kit=no_ag_kit,
     )
 
-    # 1. Update antislop-ai skills in .agents/skills/
+    # 1. Update antislop-ai skills
     antislop_status = "Skipped"
     if "antislop-ai" in excluded_pkgs:
         antislop_status = "Excluded"
@@ -736,20 +770,23 @@ def update_cmd(
             console.print("  [dim][>] antislop-ai: Excluded from update[/dim]")
     elif not skip_upstream:
         if not dry_run:
-            antislop_ok, antislop_msg = run_antislop(target_dir, force=force)
+            if codex:
+                antislop_ok, antislop_msg = run_antislop(target_dir, skills_dir=skills_target)
+            else:
+                antislop_ok, antislop_msg = run_antislop(target_dir)
             antislop_status = "Updated" if antislop_ok else "Fallback"
             console.print(f"  [{'green' if antislop_ok else 'yellow'}][+] antislop-ai: {antislop_msg}[/]")
         else:
-            console.print("  [dim][dry-run][/dim] Would update: [cyan]antislop-ai skills in .agents/skills/[/cyan]")
+            console.print(f"  [dim][dry-run][/dim] Would update: [cyan]antislop-ai skills in {runtime_subdir}/skills/[/cyan]")
             antislop_status = "Would Update"
     else:
         if not dry_run:
-            copied = copy_bundled_skills(target_dir)
+            copied = copy_bundled_skills(skills_target)
             antislop_status = f"Bundled ({copied} skills)"
         else:
             antislop_status = "Would Copy Bundled"
 
-    # 2. Update ag-kit .agents tree
+    # 2. Update ag-kit tree
     ag_kit_status = "Skipped"
     if "ag-kit" in excluded_pkgs:
         ag_kit_status = "Excluded"
@@ -759,17 +796,28 @@ def update_cmd(
             console.print("  [dim][>] ag-kit: Excluded from update[/dim]")
     elif not skip_upstream:
         if not dry_run:
-            ag_ok, ag_msg = run_ag_kit_update(target_dir, force=force, strategy=strategy)
+            if codex:
+                ag_ok, ag_msg = run_ag_kit_update(target_dir, force=force, strategy=strategy, codex=True)
+            else:
+                ag_ok, ag_msg = run_ag_kit_update(target_dir, force=force, strategy=strategy)
             ag_kit_status = "Updated" if ag_ok else "Preserved"
             console.print(f"  [{'green' if ag_ok else 'yellow'}][+] ag-kit: {ag_msg}[/]")
         else:
-            console.print(
-                f"  [dim][dry-run][/dim] Would execute: [cyan]ag-kit update -f -q --no-backup -p {target_dir} --strategy {strategy}[/cyan]"
-            )
+            if codex:
+                console.print(
+                    f"  [dim][dry-run][/dim] Would execute: [cyan]ag-kit update (projected to .codex/, strategy: {strategy})[/cyan]"
+                )
+            else:
+                console.print(
+                    f"  [dim][dry-run][/dim] Would execute: [cyan]ag-kit update -f -q --no-backup -p {target_dir} --strategy {strategy}[/cyan]"
+                )
             ag_kit_status = "Would Update"
     else:
         if not dry_run:
-            copied = copy_bundled_agents(target_dir)
+            if codex:
+                copied = copy_bundled_codex(target_dir, strategy=strategy)
+            else:
+                copied = copy_bundled_agents(target_dir)
             ag_kit_status = f"Bundled ({copied} files)"
         else:
             ag_kit_status = "Would Copy Bundled"
@@ -835,8 +883,16 @@ def update_cmd(
     table.add_column("Status", style="green")
     table.add_column("Details")
 
-    antislop_detail = "Package excluded via CLI flag" if antislop_status == "Excluded" else "Skills in .agents/skills/"
-    ag_kit_detail = "Package excluded via CLI flag" if ag_kit_status == "Excluded" else f"Managed .agents tree (strategy: {strategy})"
+    antislop_detail = (
+        "Package excluded via CLI flag"
+        if antislop_status == "Excluded"
+        else f"Skills in {runtime_subdir}/skills/"
+    )
+    ag_kit_detail = (
+        "Package excluded via CLI flag"
+        if ag_kit_status == "Excluded"
+        else f"Managed {runtime_subdir} tree (strategy: {strategy})"
+    )
     table.add_row("antislop-ai", antislop_status, antislop_detail)
     table.add_row("ag-kit", ag_kit_status, ag_kit_detail)
     rules_detail = f"{len(rules_synced)} synced, {len(rules_added)} added"

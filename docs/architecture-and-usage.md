@@ -84,11 +84,24 @@ ag-init update
 ag-init update --exclude antislop-ai
 ag-init update --no-ag-kit
 
+# Update Codex CLI workspace (.codex/ + AGENTS.md)
+ag-init update --codex
+
 # Upgrade global ag-init tool itself
 ag-init update --self
 
 # Uninstall
 ag-init uninstall
+```
+
+### Codex CLI Mode (`--codex`)
+Configure a Codex-native project tree (`.codex/skills/`, `.codex/agents/`, `.codex/rules/`, `.codex/workflows/`, `.codex/memory/`, and `AGENTS.md`) without creating an Antigravity `.agents/` folder:
+```bash
+# Initialize workspace for Codex CLI
+ag-init --codex
+
+# Combine with package exclusions
+ag-init --codex --exclude ag-kit
 ```
 
 ### Excluding Packages on Initialization
