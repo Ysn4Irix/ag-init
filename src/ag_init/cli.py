@@ -329,6 +329,7 @@ def main(
         context=merge_context,
         create_backup=True,
         dry_run=dry_run,
+        codex=codex,
     )
 
     if merge_res.rules_added:
@@ -845,6 +846,7 @@ def update_cmd(
             context={"language_in": "english", "language_out": "english"},
             create_backup=True,
             dry_run=dry_run,
+            codex=codex,
         )
         rules_synced = merge_res.rules_updated
         rules_added = merge_res.rules_added
@@ -861,6 +863,7 @@ def update_cmd(
             context={"language_in": "english", "language_out": "english"},
             create_backup=True,
             dry_run=dry_run,
+            codex=codex,
         )
         rules_added = merge_res.rules_added
         if rules_added:

@@ -11,16 +11,28 @@ def test_rule_registry_builtins():
     assert "language" in ids
     assert "engineering-standards" in ids
     assert "github-cicd" in ids
+    assert "project-profile" in ids
+    assert "toolkit-integration" in ids
 
     lang_rule = registry.get_rule("language")
     assert lang_rule is not None
     assert lang_rule.category == "general"
-    assert "INPUT_LANGUAGE" in lang_rule.content
+    assert "Reply in English" in lang_rule.content
 
     eng_rule = registry.get_rule("engineering-standards")
     assert eng_rule is not None
     assert eng_rule.category == "engineering"
     assert "Core Principles" in eng_rule.content
+
+    profile_rule = registry.get_rule("project-profile")
+    assert profile_rule is not None
+    assert profile_rule.default is True
+    assert "Project Profile" in profile_rule.content
+
+    toolkit_rule = registry.get_rule("toolkit-integration")
+    assert toolkit_rule is not None
+    assert toolkit_rule.default is True
+    assert "Precedence" in toolkit_rule.content
 
 
 def test_custom_rule_loading(tmp_path: Path):
@@ -65,8 +77,9 @@ def test_merge_rules_into_blank_file(tmp_path: Path):
     assert len(res.rules_added) == 2
     content = agents_md.read_text(encoding="utf-8")
     assert "<!-- ag-init:rule:language:start -->" in content
-    assert "INPUT_LANGUAGE is french" in content
+    assert "Reply in English" in content
     assert "<!-- ag-init:rule:engineering-standards:start -->" in content
+    assert "{task-slug}" in content
 
 
 def test_merge_rules_idempotent(tmp_path: Path):
@@ -172,4 +185,25 @@ Global text that must NOT be loaded.
 
     registry = RuleRegistry()
     assert "leaked-global" not in registry.rules
+
+
+def test_merge_rules_codex_rewrites_paths(tmp_path: Path):
+    agents_md = tmp_path / "AGENTS.md"
+    registry = RuleRegistry()
+    rules = [
+        registry.get_rule("engineering-standards"),
+        registry.get_rule("github-cicd"),
+        registry.get_rule("toolkit-integration"),
+    ]
+
+    res = merge_rules_into_agents_md(agents_md, rules, codex=True)
+    assert len(res.rules_added) == 3
+
+    content = agents_md.read_text(encoding="utf-8")
+    assert ".codex/memory/MEMORY.md" in content
+    assert ".codex/scripts/checklist.py" in content
+    assert ".codex/hooks/sync-mcp.mjs" in content
+    assert ".codex/agents" in content
+    assert "{task-slug}" in content
+    assert ".agents/" not in content
 

@@ -284,7 +284,7 @@ def copy_bundled_agents(target_dir: Path) -> int:
     return copied
 
 
-def _rewrite_codex_references(text: str) -> str:
+def rewrite_codex_references(text: str) -> str:
     """Rewrite .agents/* path references to .codex/* for Codex CLI compatibility."""
     replacements = (
         (".agents/agent/", ".codex/agents/"),
@@ -295,6 +295,7 @@ def _rewrite_codex_references(text: str) -> str:
         (".agents/memory/", ".codex/memory/"),
         (".agents/scripts/", ".codex/scripts/"),
         (".agents/schemas/", ".codex/schemas/"),
+        (".agents/hooks/", ".codex/hooks/"),
         (".agents/", ".codex/"),
     )
     updated = text
@@ -354,7 +355,7 @@ def project_agents_to_codex(
             if src_file.suffix.lower() in _CODEX_TEXT_SUFFIXES:
                 try:
                     raw_text = src_file.read_text(encoding="utf-8")
-                    dest_file.write_text(_rewrite_codex_references(raw_text), encoding="utf-8")
+                    dest_file.write_text(rewrite_codex_references(raw_text), encoding="utf-8")
                     copied += 1
                     continue
                 except UnicodeDecodeError:

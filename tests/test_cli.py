@@ -81,6 +81,8 @@ def test_cli_init_full(tmp_path: Path, mocker):
     assert "<!-- ag-init:rule:language:start -->" in content
     assert "<!-- ag-init:rule:engineering-standards:start -->" in content
     assert "<!-- ag-init:rule:github-cicd:start -->" in content
+    assert "<!-- ag-init:rule:project-profile:start -->" in content
+    assert "<!-- ag-init:rule:toolkit-integration:start -->" in content
 
     # Verify .gitignore
     gitignore = target / ".gitignore"
@@ -186,6 +188,8 @@ def test_cli_update_workspace_mocked(tmp_path: Path, mocker):
     assert "<!-- ag-init:rule:language:start -->" in content
     assert "<!-- ag-init:rule:engineering-standards:start -->" in content
     assert "<!-- ag-init:rule:github-cicd:start -->" in content
+    assert "<!-- ag-init:rule:project-profile:start -->" in content
+    assert "<!-- ag-init:rule:toolkit-integration:start -->" in content
 
 
 def test_cli_update_self_dry_run():
@@ -353,6 +357,10 @@ def test_cli_init_codex(tmp_path: Path, mocker):
     clean_stdout = re.sub(r"\s+", " ", result.stdout)
     assert "Codex CLI (.codex/)" in clean_stdout
     assert ".codex/ managed via ag-kit & antislop" in clean_stdout
+
+    agents_content = (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert ".codex/memory/MEMORY.md" in agents_content
+    assert ".agents/" not in agents_content
 
 
 def test_cli_init_codex_dry_run(tmp_path: Path):

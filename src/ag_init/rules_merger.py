@@ -152,6 +152,7 @@ def merge_rules_into_agents_md(
     context: Optional[Dict[str, Any]] = None,
     create_backup: bool = True,
     dry_run: bool = False,
+    codex: bool = False,
 ) -> MergeResult:
     """Merge rules into AGENTS.md idempotently using scoped delimiters."""
     context = context or {}
@@ -202,11 +203,16 @@ def merge_rules_into_agents_md(
         if not rule or not getattr(rule, "id", None):
             continue
         start_tag, end_tag = get_rule_delimiters(rule.id)
-        # Render placeholders like {language_in}, {language_out}
-        try:
-            rendered_body = rule.content.format(**context).strip()
-        except KeyError:
-            rendered_body = rule.content.strip()
+        # Render placeholders like {language_in}, {language_out} safely without breaking on literal braces
+        rendered_body = rule.content
+        for key, value in context.items():
+            rendered_body = rendered_body.replace(f"{{{key}}}", str(value))
+        rendered_body = rendered_body.strip()
+
+        if codex:
+            from ag_init.runner import rewrite_codex_references
+
+            rendered_body = rewrite_codex_references(rendered_body)
 
         tagged_block = f"{start_tag}\n{rendered_body}\n{end_tag}"
 
